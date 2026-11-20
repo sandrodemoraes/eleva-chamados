@@ -134,6 +134,7 @@ export function parseChamadoFromSpeech(transcricao: string): ChamadoInput {
     urgencia,
     descricao,
     transcricao: text,
+    audio_base64: "",
   };
 }
 
