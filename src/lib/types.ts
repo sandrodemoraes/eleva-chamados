@@ -14,6 +14,7 @@ export type Chamado = {
   urgencia: Urgencia;
   descricao: string;
   transcricao: string;
+  audio_base64: string;
   status: ChamadoStatus;
   criado_por: string;
   criado_por_nome: string;
@@ -29,6 +30,7 @@ export type ChamadoInput = {
   urgencia: Urgencia;
   descricao: string;
   transcricao: string;
+  audio_base64: string;
 };
 
 export const SERVICOS = [

@@ -107,6 +107,9 @@ export function ChamadoBoard({ refreshToken }: Props) {
             </header>
             <p className="endereco">{c.endereco || "Sem endereço"}</p>
             {c.telefone && <p className="fone">{c.telefone}</p>}
+            {c.audio_base64 && (
+              <audio controls src={c.audio_base64} className="audio-preview" />
+            )}
             <pre className="nota-preview">{textoParaNota(c)}</pre>
             <div className="actions">
               <button type="button" className="ghost" onClick={() => copyNota(c)}>

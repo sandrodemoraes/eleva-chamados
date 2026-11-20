@@ -18,6 +18,7 @@ const empty: ChamadoInput = {
   urgencia: "normal",
   descricao: "",
   transcricao: "",
+  audio_base64: "",
 };
 
 function mergeParsed(prev: ChamadoInput, transcript: string): ChamadoInput {
@@ -83,9 +84,20 @@ export function ChamadoComposer({ onCreated }: Props) {
     });
   }
 
+  const canSend =
+    Boolean(form.descricao || form.cliente || form.audio_base64);
+
   return (
     <section className="composer">
-      <VoiceCapture onTranscript={onTranscript} disabled={pending} />
+      <VoiceCapture
+        onTranscript={onTranscript}
+        onAudio={(dataUrl) => update("audio_base64", dataUrl)}
+        disabled={pending}
+      />
+
+      {form.audio_base64 && (
+        <audio controls src={form.audio_base64} className="audio-preview" />
+      )}
 
       <label className="field">
         <span>Transcrição</span>
@@ -156,7 +168,7 @@ export function ChamadoComposer({ onCreated }: Props) {
       <button
         type="button"
         className="primary"
-        disabled={pending || (!form.descricao && !form.cliente)}
+        disabled={pending || !canSend}
         onClick={salvar}
       >
         {pending ? "Salvando…" : "Enviar para o escritório"}

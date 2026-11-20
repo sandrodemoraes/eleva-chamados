@@ -58,10 +58,16 @@ export async function POST(request: Request) {
   const urgencia = asUrgencia(body.urgencia);
   const descricao = asString(body.descricao, 4000);
   const transcricao = asString(body.transcricao, 4000);
+  const audioRaw = asString(
+    (body as { audio_base64?: string }).audio_base64,
+    900_000,
+  );
+  const audio_base64 =
+    audioRaw.startsWith("data:audio/") ? audioRaw : "";
 
-  if (!descricao && !transcricao && !cliente) {
+  if (!descricao && !transcricao && !cliente && !audio_base64) {
     return Response.json(
-      { error: "Informe ao menos cliente ou descrição" },
+      { error: "Informe áudio, cliente ou descrição" },
       { status: 400 },
     );
   }
@@ -75,8 +81,8 @@ export async function POST(request: Request) {
   await sql(
     `insert into chamados (
       id, cliente, telefone, endereco, servico, urgencia, descricao, transcricao,
-      status, criado_por, criado_por_nome
-    ) values ($1,$2,$3,$4,$5,$6,$7,$8,'aguardando_nota',$9,$10)`,
+      audio_base64, status, criado_por, criado_por_nome
+    ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'aguardando_nota',$10,$11)`,
     [
       id,
       cliente,
@@ -86,6 +92,7 @@ export async function POST(request: Request) {
       urgencia,
       descricao || transcricao,
       transcricao,
+      audio_base64,
       identity.sub,
       nome,
     ],
