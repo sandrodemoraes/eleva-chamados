@@ -64,6 +64,30 @@ function pickFuncionarios(text: string): string {
   return joinFuncionarios(found);
 }
 
+function indexOfWord(haystack: string, term: string): number {
+  let from = 0;
+  while (from <= haystack.length) {
+    const idx = haystack.indexOf(term, from);
+    if (idx === -1) return -1;
+    if (idx === 0 || !/[\p{L}\d]/u.test(haystack[idx - 1])) return idx;
+    from = idx + 1;
+  }
+  return -1;
+}
+
+const SERVICO_STOP_TERMS = new Set([
+  "instalação",
+  "instalacao",
+  "manutenção",
+  "manutencao",
+  "camera",
+  "câmera",
+  "alarme",
+  "elétrica",
+  "eletrica",
+  "solar",
+]);
+
 function captureAfter(
   text: string,
   labels: string[],
@@ -71,13 +95,13 @@ function captureAfter(
 ): string {
   const lower = text.toLowerCase();
   for (const label of labels) {
-    const idx = lower.indexOf(label);
+    const idx = indexOfWord(lower, label);
     if (idx === -1) continue;
     let rest = text.slice(idx + label.length).replace(/^[\s:,-]+/, "");
     let cut = rest.length;
     const restLower = rest.toLowerCase();
     for (const stop of stopLabels) {
-      const s = restLower.indexOf(stop);
+      const s = indexOfWord(restLower, stop);
       if (s !== -1 && s < cut) cut = s;
     }
     rest = rest.slice(0, cut).replace(/[.,;]\s*$/, "").trim();
@@ -106,12 +130,15 @@ export function parseChamadoFromSpeech(transcricao: string): ChamadoInput {
     "tecnico",
     "horário",
     "horario",
+    "às ",
     "instalação",
     "instalacao",
     "manutenção",
     "manutencao",
     "urgência",
     "urgencia",
+    "defeito",
+    "problema",
     "observação",
     "observacao",
     "obs",
@@ -175,8 +202,28 @@ export function parseChamadoFromSpeech(transcricao: string): ChamadoInput {
       stop.filter((s) => !s.includes("hor")),
     ) || "";
 
+  const defeito =
+    captureAfter(
+      text,
+      [
+        "defeito informado ",
+        "defeito:",
+        "defeito ",
+        "problema:",
+        "problema ",
+        "reclamou que ",
+        "reclamação ",
+        "reclamacao ",
+      ],
+      stop.filter(
+        (s) =>
+          s !== "defeito" && s !== "problema" && !SERVICO_STOP_TERMS.has(s),
+      ),
+    ) || "";
+
   return {
     cliente: cliente.slice(0, 120),
+    defeito: defeito.slice(0, 2000),
     quem_chamou: quem_chamou.slice(0, 120),
     telefone: telefone.slice(0, 40),
     endereco: endereco.slice(0, 200),
@@ -197,24 +244,36 @@ export function textoParaNota(c: {
   telefone: string;
   endereco: string;
   servico: string;
+  defeito?: string;
   urgencia: string;
   descricao: string;
   funcionarios?: string;
   horario?: string;
   marcado?: boolean;
 }): string {
+  const defeitos = listaDefeitos(c.defeito);
   return [
     `Cliente: ${c.cliente || "—"}`,
     `Quem chamou: ${c.quem_chamou || "—"}`,
     `Telefone: ${c.telefone || "—"}`,
     `Endereço: ${c.endereco || "—"}`,
     `Serviço: ${c.servico || "—"}`,
+    defeitos.length
+      ? `Defeito informado pelo cliente:\n${defeitos.map((d) => `- ${d}`).join("\n")}`
+      : "Defeito informado pelo cliente: —",
     `Funcionários: ${c.funcionarios || "—"}`,
     `Horário: ${c.horario || "—"}`,
     `Marcado: ${c.marcado ? "Sim" : "Não"}`,
     `Urgência: ${c.urgencia || "—"}`,
     `Detalhes: ${c.descricao || "—"}`,
   ].join("\n");
+}
+
+export function listaDefeitos(value?: string): string[] {
+  return (value ?? "")
+    .split(/\n|;/)
+    .map((d) => d.replace(/^\s*[-•*]\s*/, "").trim())
+    .filter(Boolean);
 }
 
 export function formatHorarioLabel(value: string): string {

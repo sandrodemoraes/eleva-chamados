@@ -18,6 +18,7 @@ const empty: ChamadoInput = {
   telefone: "",
   endereco: "",
   servico: "Outro",
+  defeito: "",
   urgencia: "normal",
   descricao: "",
   transcricao: "",
@@ -35,6 +36,7 @@ function mergeParsed(prev: ChamadoInput, transcript: string): ChamadoInput {
     descricao: transcript,
     cliente: parsed.cliente || prev.cliente,
     quem_chamou: parsed.quem_chamou || prev.quem_chamou,
+    defeito: parsed.defeito || prev.defeito,
     telefone: parsed.telefone || prev.telefone,
     endereco: parsed.endereco || prev.endereco,
     servico:
@@ -138,7 +140,7 @@ export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
   }
 
   const canSend =
-    Boolean(form.descricao || form.cliente || form.audio_base64);
+    Boolean(form.descricao || form.cliente || form.defeito || form.audio_base64);
 
   return (
     <section className="composer">
@@ -180,6 +182,16 @@ export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
           />
         </label>
       </div>
+
+      <label className="field">
+        <span>Defeito informado pelo cliente</span>
+        <textarea
+          rows={3}
+          value={form.defeito}
+          onChange={(e) => update("defeito", e.target.value)}
+          placeholder={"Um defeito por linha, ex.:\nCâmera da garagem sem imagem\nAlarme disparando sozinho"}
+        />
+      </label>
 
       <div className="grid-2">
         <label className="field">

@@ -62,6 +62,8 @@ export async function PATCH(
 
   const quem = asString(body.quem_chamou, 120);
   if (quem !== undefined) add("quem_chamou", quem);
+  const defeito = asString(body.defeito, 2000);
+  if (defeito !== undefined) add("defeito", defeito);
 
   const telefone = asString(body.telefone, 40);
   if (telefone !== undefined) add("telefone", telefone);

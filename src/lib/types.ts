@@ -23,6 +23,7 @@ export type Chamado = {
   telefone: string;
   endereco: string;
   servico: string;
+  defeito: string;
   urgencia: Urgencia;
   descricao: string;
   transcricao: string;
@@ -45,6 +46,7 @@ export type ChamadoInput = {
   telefone: string;
   endereco: string;
   servico: string;
+  defeito: string;
   urgencia: Urgencia;
   descricao: string;
   transcricao: string;
@@ -61,6 +63,7 @@ export type ChamadoEdit = {
   telefone?: string;
   endereco?: string;
   servico?: string;
+  defeito?: string;
   urgencia?: Urgencia;
   descricao?: string;
   transcricao?: string;

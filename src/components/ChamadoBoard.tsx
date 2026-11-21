@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import type { Chamado, ChamadoStatus, Urgencia } from "../lib/types";
 import { SERVICOS, STATUS_LABEL } from "../lib/types";
-import { formatHorarioLabel, textoParaNota } from "../lib/parse-chamado";
+import {
+  formatHorarioLabel,
+  listaDefeitos,
+  textoParaNota,
+} from "../lib/parse-chamado";
 import { EquipePicker } from "./EquipePicker";
 
 const FILTERS: { id: string; label: string; status?: ChamadoStatus }[] = [
@@ -33,6 +37,7 @@ type EditState = {
   telefone: string;
   endereco: string;
   servico: string;
+  defeito: string;
   urgencia: Urgencia;
   descricao: string;
   funcionarios: string;
@@ -47,6 +52,7 @@ function toEdit(c: Chamado): EditState {
     telefone: c.telefone || "",
     endereco: c.endereco || "",
     servico: c.servico || "Outro",
+    defeito: c.defeito || "",
     urgencia: c.urgencia || "normal",
     descricao: c.descricao || "",
     funcionarios: c.funcionarios || "",
@@ -263,6 +269,16 @@ export function ChamadoBoard({
                       />
                     </label>
                   </div>
+                  <label className="field">
+                    <span>Defeito informado pelo cliente (um por linha)</span>
+                    <textarea
+                      rows={3}
+                      value={draft.defeito}
+                      onChange={(e) =>
+                        setDraft({ ...draft, defeito: e.target.value })
+                      }
+                    />
+                  </label>
                   <div className="grid-2">
                     <label className="field">
                       <span>Telefone</span>
@@ -379,6 +395,16 @@ export function ChamadoBoard({
                 <>
                   <p className="endereco">{c.endereco || "Sem endereço"}</p>
                   {c.telefone && <p className="fone">{c.telefone}</p>}
+                  {listaDefeitos(c.defeito).length > 0 && (
+                    <div className="defeitos">
+                      <p className="defeitos-titulo">Defeito informado pelo cliente</p>
+                      <ul>
+                        {listaDefeitos(c.defeito).map((d, i) => (
+                          <li key={i}>{d}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   {c.audio_base64 && (
                     <audio
                       controls
