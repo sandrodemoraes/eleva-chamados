@@ -88,6 +88,10 @@ export async function PATCH(
 
   const horario = asString(body.horario, 80);
   if (horario !== undefined) add("horario", horario);
+  const inicio = asString(body.inicio, 40);
+  if (inicio !== undefined) add("inicio", inicio);
+  const termino = asString(body.termino, 40);
+  if (termino !== undefined) add("termino", termino);
 
   if (typeof body.marcado === "boolean") add("marcado", body.marcado);
 

@@ -67,6 +67,8 @@ export async function POST(request: Request) {
   const funcionarios = aberto ? "" : asString(body.funcionarios, 300);
   const status = aberto ? "aberto" : "aguardando_nota";
   const horario = asString(body.horario, 80);
+  const inicio = asString(body.inicio, 40);
+  const termino = asString(body.termino, 40);
   const marcado = body.marcado === true;
   let descricao = asString(body.descricao, 4000);
   let transcricao = asString(body.transcricao, 4000);
@@ -97,8 +99,8 @@ export async function POST(request: Request) {
   await sql(
     `insert into chamados (
       id, cliente, quem_chamou, telefone, endereco, servico, urgencia, descricao, transcricao,
-      audio_base64, funcionarios, horario, marcado, status, criado_por, criado_por_nome, defeito
-    ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$16,$14,$15,$17)`,
+      audio_base64, funcionarios, horario, marcado, status, criado_por, criado_por_nome, defeito, inicio, termino
+    ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$16,$14,$15,$17,$18,$19)`,
     [
       id,
       cliente,
@@ -117,6 +119,8 @@ export async function POST(request: Request) {
       nome,
       status,
       defeito,
+      inicio,
+      termino,
     ],
   );
 

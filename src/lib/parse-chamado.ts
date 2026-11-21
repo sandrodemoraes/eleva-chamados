@@ -234,6 +234,8 @@ export function parseChamadoFromSpeech(transcricao: string): ChamadoInput {
     audio_base64: "",
     funcionarios: pickFuncionarios(text),
     horario: horario.slice(0, 80),
+    inicio: "",
+    termino: "",
     marcado: false,
   };
 }
@@ -249,6 +251,8 @@ export function textoParaNota(c: {
   descricao: string;
   funcionarios?: string;
   horario?: string;
+  inicio?: string;
+  termino?: string;
   marcado?: boolean;
 }): string {
   const defeitos = listaDefeitos(c.defeito);
@@ -262,7 +266,12 @@ export function textoParaNota(c: {
       ? `Defeito informado pelo cliente:\n${defeitos.map((d) => `- ${d}`).join("\n")}`
       : "Defeito informado pelo cliente: —",
     `Funcionários: ${c.funcionarios || "—"}`,
-    `Horário: ${c.horario || "—"}`,
+    `Horário marcado: ${formatHorarioLabel(c.horario || "")}`,
+    `Início: ${formatHorarioLabel(c.inicio || "")}`,
+    `Término: ${formatHorarioLabel(c.termino || "")}`,
+    ...(duracaoLabel(c.inicio, c.termino)
+      ? [`Duração: ${duracaoLabel(c.inicio, c.termino)}`]
+      : []),
     `Marcado: ${c.marcado ? "Sim" : "Não"}`,
     `Urgência: ${c.urgencia || "—"}`,
     `Detalhes: ${c.descricao || "—"}`,
@@ -286,4 +295,36 @@ export function formatHorarioLabel(value: string): string {
     return `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}`;
   }
   return value;
+}
+
+function parseLocal(value?: string): number | null {
+  const m = (value ?? "").match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!m) return null;
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+}
+
+export function duracaoLabel(inicio?: string, termino?: string): string {
+  const a = parseLocal(inicio);
+  const b = parseLocal(termino);
+  if (a === null || b === null || b < a) return "";
+  const min = Math.round((b - a) / 60000);
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return `${m} min`;
+  return m ? `${h}h ${m}min` : `${h}h`;
+}
+
+/** Data/hora atual em Brasília no formato do input datetime-local. */
+export function agoraLocal(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }

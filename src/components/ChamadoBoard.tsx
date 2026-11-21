@@ -4,11 +4,14 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import type { Chamado, ChamadoStatus, Urgencia } from "../lib/types";
 import { SERVICOS, STATUS_LABEL } from "../lib/types";
 import {
+  agoraLocal,
+  duracaoLabel,
   formatHorarioLabel,
   listaDefeitos,
   textoParaNota,
 } from "../lib/parse-chamado";
 import { EquipePicker } from "./EquipePicker";
+import { HoraField } from "./HoraField";
 
 const FILTERS: { id: string; label: string; status?: ChamadoStatus }[] = [
   { id: "todos", label: "Todos" },
@@ -42,6 +45,8 @@ type EditState = {
   descricao: string;
   funcionarios: string;
   horario: string;
+  inicio: string;
+  termino: string;
   marcado: boolean;
 };
 
@@ -57,6 +62,8 @@ function toEdit(c: Chamado): EditState {
     descricao: c.descricao || "",
     funcionarios: c.funcionarios || "",
     horario: c.horario || "",
+    inicio: c.inicio || "",
+    termino: c.termino || "",
     marcado: Boolean(c.marcado),
   };
 }
@@ -117,6 +124,22 @@ export function ChamadoBoard({
       setTimeout(() => setCopied(null), 2000);
     } catch {
       setError("Não foi possível copiar. Selecione o texto manualmente.");
+    }
+  }
+
+  async function marcarHora(id: string, campo: "inicio" | "termino") {
+    setBusyId(id);
+    setError("");
+    try {
+      const res = await fetch(`/api/chamados/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ [campo]: agoraLocal() }),
+      });
+      if (!res.ok) setError("Não foi possível salvar o horário.");
+      load();
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -290,7 +313,7 @@ export function ChamadoBoard({
                       />
                     </label>
                     <label className="field">
-                      <span>Horário</span>
+                      <span>Horário marcado</span>
                       <input
                         type="datetime-local"
                         value={draft.horario}
@@ -299,6 +322,18 @@ export function ChamadoBoard({
                         }
                       />
                     </label>
+                  </div>
+                  <div className="grid-2">
+                    <HoraField
+                      label="Início do serviço"
+                      value={draft.inicio}
+                      onChange={(v) => setDraft({ ...draft, inicio: v })}
+                    />
+                    <HoraField
+                      label="Término do serviço"
+                      value={draft.termino}
+                      onChange={(v) => setDraft({ ...draft, termino: v })}
+                    />
                   </div>
                   <label className="field">
                     <span>Endereço</span>
@@ -395,6 +430,15 @@ export function ChamadoBoard({
                 <>
                   <p className="endereco">{c.endereco || "Sem endereço"}</p>
                   {c.telefone && <p className="fone">{c.telefone}</p>}
+                  {(c.inicio || c.termino) && (
+                    <p className="tempo">
+                      Início: {formatHorarioLabel(c.inicio)} · Término:{" "}
+                      {formatHorarioLabel(c.termino)}
+                      {duracaoLabel(c.inicio, c.termino)
+                        ? ` · ${duracaoLabel(c.inicio, c.termino)}`
+                        : ""}
+                    </p>
+                  )}
                   {listaDefeitos(c.defeito).length > 0 && (
                     <div className="defeitos">
                       <p className="defeitos-titulo">Defeito informado pelo cliente</p>
@@ -426,6 +470,26 @@ export function ChamadoBoard({
                           : tecnico
                             ? `Pegar chamado (${tecnico})`
                             : "Pegar chamado"}
+                      </button>
+                    )}
+                    {c.status !== "aberto" && !c.inicio && (
+                      <button
+                        type="button"
+                        className="ghost"
+                        disabled={busyId === c.id}
+                        onClick={() => void marcarHora(c.id, "inicio")}
+                      >
+                        Iniciar agora
+                      </button>
+                    )}
+                    {c.inicio && !c.termino && (
+                      <button
+                        type="button"
+                        className="ghost"
+                        disabled={busyId === c.id}
+                        onClick={() => void marcarHora(c.id, "termino")}
+                      >
+                        Terminar agora
                       </button>
                     )}
                     {c.status === "em_andamento" && (

@@ -30,6 +30,8 @@ export type Chamado = {
   audio_base64?: string;
   funcionarios: string;
   horario: string;
+  inicio: string;
+  termino: string;
   marcado: boolean;
   status: ChamadoStatus;
   assumido_por?: string;
@@ -53,6 +55,8 @@ export type ChamadoInput = {
   audio_base64: string;
   funcionarios: string;
   horario: string;
+  inicio: string;
+  termino: string;
   marcado: boolean;
   aberto?: boolean;
 };
@@ -69,6 +73,8 @@ export type ChamadoEdit = {
   transcricao?: string;
   funcionarios?: string;
   horario?: string;
+  inicio?: string;
+  termino?: string;
   marcado?: boolean;
   status?: ChamadoStatus;
 };

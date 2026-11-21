@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { VoiceCapture } from "./VoiceCapture";
 import { EquipePicker } from "./EquipePicker";
+import { HoraField } from "./HoraField";
 import { parseChamadoFromSpeech } from "../lib/parse-chamado";
 import type { Chamado, ChamadoInput, Urgencia } from "../lib/types";
 import { SERVICOS } from "../lib/types";
@@ -25,6 +26,8 @@ const empty: ChamadoInput = {
   audio_base64: "",
   funcionarios: "",
   horario: "",
+  inicio: "",
+  termino: "",
   marcado: false,
 };
 
@@ -204,7 +207,7 @@ export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
           />
         </label>
         <label className="field">
-          <span>Horário</span>
+          <span>Horário marcado</span>
           <input
             type="datetime-local"
             value={form.horario}
@@ -212,6 +215,21 @@ export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
           />
         </label>
       </div>
+
+      {!aberto && (
+        <div className="grid-2">
+          <HoraField
+            label="Início do serviço"
+            value={form.inicio}
+            onChange={(v) => update("inicio", v)}
+          />
+          <HoraField
+            label="Término do serviço"
+            value={form.termino}
+            onChange={(v) => update("termino", v)}
+          />
+        </div>
+      )}
 
       <label className="field">
         <span>Endereço</span>
