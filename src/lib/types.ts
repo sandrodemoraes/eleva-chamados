@@ -28,6 +28,12 @@ export type Chamado = {
   descricao: string;
   transcricao: string;
   audio_base64?: string;
+  tem_audio?: boolean;
+  fotos_count?: number;
+  tem_assinatura?: boolean;
+  assinado_nome?: string;
+  assinado_em?: string | null;
+  checklist?: string;
   funcionarios: string;
   horario: string;
   inicio: string;
@@ -59,6 +65,7 @@ export type ChamadoInput = {
   termino: string;
   marcado: boolean;
   aberto?: boolean;
+  id?: string;
 };
 
 export type ChamadoEdit = {
@@ -76,6 +83,7 @@ export type ChamadoEdit = {
   inicio?: string;
   termino?: string;
   marcado?: boolean;
+  checklist?: Record<string, boolean>;
   status?: ChamadoStatus;
 };
 
@@ -88,3 +96,15 @@ export const SERVICOS = [
   "Manutenção",
   "Outro",
 ] as const;
+
+export type Foto = {
+  id: string;
+  chamado_id: string;
+  tipo: "antes" | "depois";
+  imagem_base64?: string;
+  legenda: string;
+  latitude: number | null;
+  longitude: number | null;
+  tirada_em: string;
+  criado_por_nome: string;
+};

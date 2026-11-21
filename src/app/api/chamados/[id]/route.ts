@@ -95,6 +95,17 @@ export async function PATCH(
 
   if (typeof body.marcado === "boolean") add("marcado", body.marcado);
 
+  if (body.checklist !== undefined) {
+    const c = body.checklist;
+    if (typeof c !== "object" || c === null || Array.isArray(c)) {
+      return Response.json({ error: "checklist inválido" }, { status: 400 });
+    }
+    const entries = Object.entries(c)
+      .filter(([k, v]) => typeof v === "boolean" && k.length <= 160)
+      .slice(0, 60);
+    add("checklist", JSON.stringify(Object.fromEntries(entries)));
+  }
+
   if (body.status !== undefined) {
     if (!STATUSES.includes(body.status)) {
       return Response.json({ error: "status inválido" }, { status: 400 });

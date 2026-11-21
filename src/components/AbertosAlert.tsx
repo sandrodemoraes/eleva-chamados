@@ -9,7 +9,53 @@ const BASE_TITLE = "Eleva Chamados";
 type Props = {
   onVerAbertos: () => void;
   onChange: () => void;
+  tecnico: string;
 };
+
+function base64ParaBytes(base64: string): Uint8Array<ArrayBuffer> {
+  const padded = (base64 + "=".repeat((4 - (base64.length % 4)) % 4))
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+  const raw = atob(padded);
+  const out = new Uint8Array(new ArrayBuffer(raw.length));
+  for (let i = 0; i < raw.length; i += 1) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+/** Inscreve este aparelho para receber aviso mesmo com o app fechado. */
+async function inscreverPush(nome: string): Promise<boolean> {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const res = await fetch("/api/push");
+      if (!res.ok) return false;
+      const { publicKey } = (await res.json()) as { publicKey: string };
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: base64ParaBytes(publicKey),
+      });
+    }
+    const res = await fetch("/api/push", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...sub.toJSON(), nome }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+function iphoneSemTelaInicial(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const standalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return ios && !standalone;
+}
 
 type Permissao = NotificationPermission | "indisponivel";
 
@@ -38,7 +84,7 @@ async function avisar(chamado: Chamado, total: number) {
   const opcoes: NotificationOptions = {
     body: total > 1 ? `${corpo}\n${total} chamados aguardando técnico` : corpo,
     tag: `chamado-${chamado.id}`,
-    icon: "/favicon.ico",
+    icon: "/icons/192",
   };
   const reg = await registrarSW();
   if (reg) {
@@ -48,9 +94,18 @@ async function avisar(chamado: Chamado, total: number) {
   }
 }
 
-export function AbertosAlert({ onVerAbertos, onChange }: Props) {
+export function AbertosAlert({ onVerAbertos, onChange, tecnico }: Props) {
   const [abertos, setAbertos] = useState<Chamado[]>([]);
   const [permissao, setPermissao] = useState<Permissao>("default");
+  const [push, setPush] = useState(false);
+  const [dicaIphone, setDicaIphone] = useState(false);
+
+  useEffect(() => {
+    setDicaIphone(iphoneSemTelaInicial());
+    if (permissaoAtual() === "granted") {
+      void inscreverPush(tecnico).then(setPush);
+    }
+  }, [tecnico]);
   const conhecidos = useRef<Set<string> | null>(null);
 
   const verificar = useCallback(async () => {
@@ -103,6 +158,7 @@ export function AbertosAlert({ onVerAbertos, onChange }: Props) {
     const result = await Notification.requestPermission();
     setPermissao(result);
     if (result === "granted") {
+      setPush(await inscreverPush(tecnico));
       const reg = await registrarSW();
       const opcoes = { body: "Você vai receber um aviso quando abrirem um chamado técnico." };
       if (reg) await reg.showNotification("Avisos ativados", opcoes);
@@ -131,6 +187,17 @@ export function AbertosAlert({ onVerAbertos, onChange }: Props) {
           <button type="button" className="chip" onClick={() => void ativar()}>
             Ativar avisos no celular
           </button>
+        )}
+        {permissao === "granted" && (
+          <span className="alerta-nota">
+            {push ? "Avisos ativos, mesmo com o app fechado." : "Avisos ativos com o app aberto."}
+          </span>
+        )}
+        {dicaIphone && permissao !== "granted" && (
+          <span className="alerta-nota">
+            No iPhone: toque em Compartilhar e depois em “Adicionar à Tela de Início”. Abra pelo
+            ícone e ative os avisos.
+          </span>
         )}
         {permissao === "denied" && (
           <span className="alerta-nota">

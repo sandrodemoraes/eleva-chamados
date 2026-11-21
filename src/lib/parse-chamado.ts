@@ -1,6 +1,7 @@
 import type { ChamadoInput, Urgencia } from "./types";
 import { SERVICOS } from "./types";
 import { EQUIPE, joinFuncionarios } from "./equipe";
+import { checklistDo, lerChecklist } from "./checklists";
 
 const SERVICO_ALIASES: { label: (typeof SERVICOS)[number]; terms: string[] }[] =
   [
@@ -254,7 +255,17 @@ export function textoParaNota(c: {
   inicio?: string;
   termino?: string;
   marcado?: boolean;
+  checklist?: string;
+  fotos_count?: number;
+  assinado_nome?: string;
+  assinado_em?: string | null;
 }): string {
+  const itens = checklistDo(c.servico);
+  const marcados = lerChecklist(c.checklist);
+  const feitos = itens.filter((i) => marcados[i.texto]).map((i) => i.texto);
+  const assinatura = c.assinado_nome
+    ? `${c.assinado_nome}${c.assinado_em ? ` em ${dataHoraBR(c.assinado_em)}` : ""}`
+    : "—";
   const defeitos = listaDefeitos(c.defeito);
   return [
     `Cliente: ${c.cliente || "—"}`,
@@ -273,6 +284,11 @@ export function textoParaNota(c: {
       ? [`Duração: ${duracaoLabel(c.inicio, c.termino)}`]
       : []),
     `Marcado: ${c.marcado ? "Sim" : "Não"}`,
+    feitos.length
+      ? `Checklist (${feitos.length}/${itens.length}):\n${feitos.map((t) => `- ${t}`).join("\n")}`
+      : `Checklist: 0/${itens.length}`,
+    `Fotos: ${c.fotos_count ?? 0}`,
+    `Assinado por: ${assinatura}`,
     `Urgência: ${c.urgencia || "—"}`,
     `Detalhes: ${c.descricao || "—"}`,
   ].join("\n");
@@ -327,4 +343,16 @@ export function agoraLocal(): string {
   }).formatToParts(new Date());
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
   return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}
+
+function dataHoraBR(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
 }

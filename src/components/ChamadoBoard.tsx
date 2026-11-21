@@ -12,6 +12,13 @@ import {
 } from "../lib/parse-chamado";
 import { EquipePicker } from "./EquipePicker";
 import { HoraField } from "./HoraField";
+import { AudioSob } from "./AudioSob";
+import { ChecklistPanel } from "./ChecklistPanel";
+import { FotosPanel } from "./FotosPanel";
+import { AssinaturaPanel } from "./AssinaturaPanel";
+import { HistoricoCliente } from "./HistoricoCliente";
+import { checklistDo, faltandoObrigatorios, lerChecklist } from "../lib/checklists";
+import { enviar } from "../lib/outbox";
 
 const FILTERS: { id: string; label: string; status?: ChamadoStatus }[] = [
   { id: "todos", label: "Todos" },
@@ -68,6 +75,8 @@ function toEdit(c: Chamado): EditState {
   };
 }
 
+type Painel = "checklist" | "fotos" | "assinatura";
+
 type Props = {
   refreshToken: number;
   tecnico: string;
@@ -87,6 +96,32 @@ export function ChamadoBoard({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<EditState | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [painel, setPainel] = useState<Record<string, Painel | undefined>>({});
+  const [aviso, setAviso] = useState("");
+
+  function alternarPainel(id: string, p: Painel) {
+    setPainel((prev) => ({ ...prev, [id]: prev[id] === p ? undefined : p }));
+  }
+
+  function patchLocal(id: string, campos: Partial<Chamado>) {
+    setItems((prev) => prev.map((c) => (c.id === id ? { ...c, ...campos } : c)));
+  }
+
+  /** PATCH pela fila offline; sem internet atualiza a tela na hora. */
+  async function salvarCampos(id: string, campos: Partial<Chamado> & Record<string, unknown>, descricao: string) {
+    const r = await enviar(`/api/chamados/${id}`, "PATCH", campos, descricao);
+    if ("ok" in r && !r.ok) {
+      setError(r.error);
+      return false;
+    }
+    if ("queued" in r) {
+      patchLocal(id, campos as Partial<Chamado>);
+      setAviso("Sem internet: alteração guardada no celular, envia quando o sinal voltar.");
+      return true;
+    }
+    load();
+    return true;
+  }
 
   const load = useCallback(() => {
     startTransition(async () => {
@@ -107,13 +142,34 @@ export function ChamadoBoard({
     load();
   }, [load, refreshToken]);
 
+  useEffect(() => {
+    const onSync = () => {
+      setAviso("");
+      load();
+    };
+    window.addEventListener("eleva-sincronizado", onSync);
+    return () => window.removeEventListener("eleva-sincronizado", onSync);
+  }, [load]);
+
   async function setStatus(id: string, status: ChamadoStatus) {
-    const res = await fetch(`/api/chamados/${id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    if (res.ok) load();
+    await salvarCampos(id, { status }, "Status");
+  }
+
+  async function servicoFeito(c: Chamado) {
+    const faltando = faltandoObrigatorios(c.servico, c.checklist);
+    if (faltando.length > 0) {
+      setPainel((prev) => ({ ...prev, [c.id]: "checklist" }));
+      setError(`Complete o checklist antes de fechar: ${faltando.join("; ")}.`);
+      return;
+    }
+    if (!c.tem_assinatura && !window.confirm("Fechar o serviço sem a assinatura do cliente?")) {
+      setPainel((prev) => ({ ...prev, [c.id]: "assinatura" }));
+      return;
+    }
+    setError("");
+    const campos: Partial<Chamado> = { status: "aguardando_nota" };
+    if (!c.termino) campos.termino = agoraLocal();
+    await salvarCampos(c.id, campos, "Serviço feito");
   }
 
   async function copyNota(c: Chamado) {
@@ -131,13 +187,7 @@ export function ChamadoBoard({
     setBusyId(id);
     setError("");
     try {
-      const res = await fetch(`/api/chamados/${id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ [campo]: agoraLocal() }),
-      });
-      if (!res.ok) setError("Não foi possível salvar o horário.");
-      load();
+      await salvarCampos(id, { [campo]: agoraLocal() }, campo === "inicio" ? "Início" : "Término");
     } finally {
       setBusyId(null);
     }
@@ -146,6 +196,10 @@ export function ChamadoBoard({
   async function assumir(id: string) {
     if (!tecnico) {
       setError("Escolha seu nome em “Eu sou” no topo para pegar o chamado.");
+      return;
+    }
+    if (!navigator.onLine) {
+      setError("Para pegar um chamado é preciso internet, para não pegarem o mesmo ao mesmo tempo.");
       return;
     }
     setBusyId(id);
@@ -181,18 +235,7 @@ export function ChamadoBoard({
     setBusyId(id);
     setError("");
     try {
-      const res = await fetch(`/api/chamados/${id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(draft),
-      });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(data.error || "Não foi possível salvar a edição.");
-        return;
-      }
-      cancelEdit();
-      load();
+      if (await salvarCampos(id, draft, "Edição")) cancelEdit();
     } finally {
       setBusyId(null);
     }
@@ -242,6 +285,7 @@ export function ChamadoBoard({
 
       {pending && items.length === 0 && <p className="hint">Carregando…</p>}
       {error && <p className="error">{error}</p>}
+      {aviso && <p className="hint">{aviso}</p>}
 
       <ul className="chamado-list">
         {items.map((c) => {
@@ -449,11 +493,50 @@ export function ChamadoBoard({
                       </ul>
                     </div>
                   )}
-                  {c.audio_base64 && (
-                    <audio
-                      controls
-                      src={c.audio_base64}
-                      className="audio-preview"
+                  {(c.tem_audio || c.audio_base64) && <AudioSob chamadoId={c.id} />}
+                  <HistoricoCliente cliente={c.cliente} excluirId={c.id} />
+                  <div className="paineis-tabs">
+                    <button
+                      type="button"
+                      className={painel[c.id] === "checklist" ? "chip chip--on" : "chip"}
+                      onClick={() => alternarPainel(c.id, "checklist")}
+                    >
+                      Checklist{" "}
+                      {checklistDo(c.servico).filter((i) => lerChecklist(c.checklist)[i.texto]).length}/
+                      {checklistDo(c.servico).length}
+                    </button>
+                    <button
+                      type="button"
+                      className={painel[c.id] === "fotos" ? "chip chip--on" : "chip"}
+                      onClick={() => alternarPainel(c.id, "fotos")}
+                    >
+                      Fotos ({c.fotos_count ?? 0})
+                    </button>
+                    <button
+                      type="button"
+                      className={painel[c.id] === "assinatura" ? "chip chip--on" : "chip"}
+                      onClick={() => alternarPainel(c.id, "assinatura")}
+                    >
+                      {c.tem_assinatura ? "Assinado ✓" : "Assinatura"}
+                    </button>
+                  </div>
+                  {painel[c.id] === "checklist" && (
+                    <ChecklistPanel
+                      key={`${c.id}-${c.servico}`}
+                      chamadoId={c.id}
+                      servico={c.servico}
+                      raw={c.checklist}
+                      onSaved={load}
+                    />
+                  )}
+                  {painel[c.id] === "fotos" && <FotosPanel chamadoId={c.id} onChange={load} />}
+                  {painel[c.id] === "assinatura" && (
+                    <AssinaturaPanel
+                      chamadoId={c.id}
+                      assinadoNome={c.assinado_nome}
+                      assinadoEm={c.assinado_em}
+                      temAssinatura={c.tem_assinatura}
+                      onSaved={load}
                     />
                   )}
                   <pre className="nota-preview">{textoParaNota(c)}</pre>
@@ -497,7 +580,7 @@ export function ChamadoBoard({
                         type="button"
                         className="primary"
                         disabled={busyId === c.id}
-                        onClick={() => setStatus(c.id, "aguardando_nota")}
+                        onClick={() => void servicoFeito(c)}
                       >
                         Serviço feito
                       </button>
@@ -509,13 +592,8 @@ export function ChamadoBoard({
                       onClick={() =>
                         void (async () => {
                           setBusyId(c.id);
-                          await fetch(`/api/chamados/${c.id}`, {
-                            method: "PATCH",
-                            headers: { "content-type": "application/json" },
-                            body: JSON.stringify({ marcado: !c.marcado }),
-                          });
+                          await salvarCampos(c.id, { marcado: !c.marcado }, "Marcado");
                           setBusyId(null);
-                          load();
                         })()
                       }
                     >
@@ -535,7 +613,7 @@ export function ChamadoBoard({
                     >
                       {copied === c.id ? "Copiado" : "Copiar para nota"}
                     </button>
-                    {c.audio_base64 && (
+                    {(c.tem_audio || c.audio_base64) && (
                       <button
                         type="button"
                         className="ghost"

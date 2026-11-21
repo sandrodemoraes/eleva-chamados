@@ -5,6 +5,7 @@ import { ChamadoComposer } from "./ChamadoComposer";
 import { ChamadoBoard } from "./ChamadoBoard";
 import { AbertosAlert } from "./AbertosAlert";
 import { EQUIPE } from "../lib/equipe";
+import { useFila } from "../lib/outbox";
 import type { Chamado } from "../lib/types";
 
 type Mode = "campo" | "abertos" | "escritorio";
@@ -17,7 +18,12 @@ export function AppShell() {
   const [tecnico, setTecnico] = useState("");
   const [abrindo, setAbrindo] = useState(false);
 
+  const fila = useFila();
+
   useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    }
     setTecnico(localStorage.getItem(TECNICO_KEY) ?? "");
     if (new URLSearchParams(window.location.search).get("aba") === "abertos") {
       setMode("abertos");
@@ -33,7 +39,7 @@ export function AppShell() {
   const refresh = useCallback(() => setRefreshToken((n) => n + 1), []);
   const verAbertos = useCallback(() => setMode("abertos"), []);
 
-  function onCreated(_chamado: Chamado) {
+  function onCreated(_chamado?: Chamado) {
     refresh();
   }
 
@@ -82,7 +88,24 @@ export function AppShell() {
         </select>
       </div>
 
-      <AbertosAlert onVerAbertos={verAbertos} onChange={refresh} />
+      {(!fila.online || fila.qtd > 0) && (
+        <p className={fila.online ? "fila fila--sync" : "fila"} role="status">
+          {!fila.online && "Sem internet. Pode continuar trabalhando: tudo fica guardado no celular."}
+          {fila.online && fila.qtd > 0 && "Enviando o que ficou guardado…"}
+          {fila.qtd > 0 &&
+            ` ${fila.qtd} ${fila.qtd === 1 ? "envio pendente" : "envios pendentes"}.`}
+        </p>
+      )}
+      {fila.erro && (
+        <p className="error" role="alert">
+          Um envio guardado foi recusado: {fila.erro}{" "}
+          <button type="button" className="link-btn" onClick={fila.limparErro}>
+            ok
+          </button>
+        </p>
+      )}
+
+      <AbertosAlert onVerAbertos={verAbertos} onChange={refresh} tecnico={tecnico} />
 
       {mode === "campo" && (
         <main className="main main--campo">

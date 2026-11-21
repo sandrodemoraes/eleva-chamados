@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { VoiceCapture } from "./VoiceCapture";
 import { EquipePicker } from "./EquipePicker";
 import { HoraField } from "./HoraField";
+import { HistoricoAviso } from "./HistoricoCliente";
+import { enviar, novoId } from "../lib/outbox";
+import { EQUIPE } from "../lib/equipe";
 import { parseChamadoFromSpeech } from "../lib/parse-chamado";
 import type { Chamado, ChamadoInput, Urgencia } from "../lib/types";
+import type { CamposIA } from "../lib/estruturar";
 import { SERVICOS } from "../lib/types";
 
 type Props = {
-  onCreated: (chamado: Chamado) => void;
+  onCreated: (chamado?: Chamado) => void;
   modo?: "campo" | "escritorio";
 };
 
@@ -51,6 +55,23 @@ function mergeParsed(prev: ChamadoInput, transcript: string): ChamadoInput {
   };
 }
 
+function aplicarIA(prev: ChamadoInput, c: CamposIA): ChamadoInput {
+  const equipe = c.funcionarios.filter((n) => (EQUIPE as readonly string[]).includes(n));
+  return {
+    ...prev,
+    cliente: c.cliente || prev.cliente,
+    quem_chamou: c.quem_chamou || prev.quem_chamou,
+    telefone: c.telefone || prev.telefone,
+    endereco: c.endereco || prev.endereco,
+    servico: c.servico && c.servico !== "Outro" ? c.servico : prev.servico,
+    defeito: c.defeitos.length ? c.defeitos.join("\n") : prev.defeito,
+    urgencia: c.urgencia || prev.urgencia,
+    funcionarios: equipe.length ? equipe.join(", ") : prev.funcionarios,
+    horario: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(c.horario) ? c.horario : prev.horario,
+    descricao: c.resumo || prev.descricao,
+  };
+}
+
 export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
   const [form, setForm] = useState<ChamadoInput>(empty);
   const [aberto, setAberto] = useState(modo === "escritorio");
@@ -58,6 +79,42 @@ export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
   const [message, setMessage] = useState("");
   const [transcribing, setTranscribing] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [ia, setIa] = useState<"idle" | "loading">("idle");
+  const formRef = useRef(form);
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
+
+  async function organizarComIA(texto: string, automatico = false) {
+    if (texto.trim().length < 10 || !navigator.onLine) return;
+    setIa("loading");
+    try {
+      const res = await fetch("/api/estruturar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ texto }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        campos?: CamposIA;
+        needs_key?: boolean;
+        error?: string;
+      };
+      if (data.campos) {
+        setForm((prev) => aplicarIA(prev, data.campos!));
+        setMessage("A IA organizou o chamado. Confira os campos antes de enviar.");
+      } else if (!automatico) {
+        setMessage(
+          data.needs_key
+            ? "A IA precisa da chave OpenAI nas Secrets do app. Os campos foram preenchidos pelas palavras-chave."
+            : data.error || "A IA não respondeu agora.",
+        );
+      }
+    } catch {
+      if (!automatico) setMessage("A IA não respondeu agora.");
+    } finally {
+      setIa("idle");
+    }
+  }
 
   function onTranscript(text: string, isFinal: boolean) {
     if (isFinal) {
@@ -75,6 +132,7 @@ export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
     setForm((prev) => ({ ...prev, audio_base64: dataUrl }));
     setTranscribing(true);
     setMessage("Passando o áudio para texto…");
+    let iaChamada = false;
     try {
       const res = await fetch("/api/transcribe", {
         method: "POST",
@@ -94,6 +152,8 @@ export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
           return { ...merged, audio_base64: dataUrl };
         });
         setMessage("Áudio convertido em texto. Revise e envie.");
+        iaChamada = true;
+        void organizarComIA(data.text.trim(), true);
       } else if (data.needs_key || data.source === "none") {
         setMessage(
           data.hint ||
@@ -106,6 +166,9 @@ export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
       setMessage("Não deu para transcrever agora. Digite o texto do áudio.");
     } finally {
       setTranscribing(false);
+    }
+    if (!iaChamada && formRef.current.transcricao) {
+      void organizarComIA(formRef.current.transcricao, true);
     }
   }
 
@@ -120,20 +183,25 @@ export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
   function salvar() {
     setMessage("");
     startTransition(async () => {
-      const res = await fetch("/api/chamados", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...form, aberto }),
-      });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setMessage(data.error || "Não foi possível salvar");
+      const result = await enviar<{ chamado: Chamado }>(
+        "/api/chamados",
+        "POST",
+        { ...form, aberto, id: novoId() },
+        `Chamado ${form.cliente || "sem cliente"}`,
+      );
+      if ("ok" in result && !result.ok) {
+        setMessage(result.error);
         return;
       }
-      const data = (await res.json()) as { chamado: Chamado };
-      onCreated(data.chamado);
+      onCreated("ok" in result ? result.data.chamado : undefined);
       setForm(empty);
       setInterim("");
+      if ("queued" in result) {
+        setMessage(
+          "Sem internet: o chamado ficou guardado no celular e será enviado sozinho quando o sinal voltar.",
+        );
+        return;
+      }
       setMessage(
         aberto
           ? "Chamado aberto. Os técnicos recebem o aviso para pegar."
@@ -158,7 +226,17 @@ export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
       )}
 
       <label className="field">
-        <span>Texto do áudio</span>
+        <span className="field-head">
+          Texto do áudio
+          <button
+            type="button"
+            className="chip chip--ia"
+            disabled={ia === "loading" || form.transcricao.trim().length < 10}
+            onClick={() => void organizarComIA(form.transcricao)}
+          >
+            {ia === "loading" ? "Organizando…" : "Organizar com IA"}
+          </button>
+        </span>
         <textarea
           rows={4}
           value={`${form.transcricao}${interim ? ` ${interim}` : ""}`.trim()}
@@ -185,6 +263,8 @@ export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
           />
         </label>
       </div>
+
+      <HistoricoAviso cliente={form.cliente} />
 
       <label className="field">
         <span>Defeito informado pelo cliente</span>

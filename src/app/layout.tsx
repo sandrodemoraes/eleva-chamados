@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   description:
     "Anote chamados por áudio no campo. O escritório recebe o texto pronto para emitir a nota do cliente.",
   applicationName: "Eleva Chamados",
+  appleWebApp: {
+    capable: true,
+    title: "Chamados",
+    statusBarStyle: "default",
+  },
 };
 
 export const viewport: Viewport = {
@@ -35,6 +40,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
+      <head>
+        {/* O app é privado: o manifesto precisa ir com o cookie de login. */}
+        <link
+          rel="manifest"
+          href="/manifest.webmanifest"
+          crossOrigin="use-credentials"
+        />
+        <link rel="apple-touch-icon" href="/icons/180" />
+      </head>
       <body className={`${syne.variable} ${figtree.variable} antialiased`}>
         {children}
       </body>
