@@ -252,6 +252,7 @@ export function textoParaNota(c: {
   descricao: string;
   funcionarios?: string;
   horario?: string;
+  produtos?: string;
   inicio?: string;
   termino?: string;
   marcado?: boolean;
@@ -278,6 +279,14 @@ export function textoParaNota(c: {
       : "Defeito informado pelo cliente: —",
     `Funcionários: ${c.funcionarios || "—"}`,
     `Horário marcado: ${formatHorarioLabel(c.horario || "")}`,
+    c.produtos?.trim()
+      ? `Produtos usados:\n${c.produtos
+          .split("\n")
+          .map((p) => p.trim())
+          .filter(Boolean)
+          .map((p) => `- ${p}`)
+          .join("\n")}`
+      : "Produtos usados: —",
     `Início: ${formatHorarioLabel(c.inicio || "")}`,
     `Término: ${formatHorarioLabel(c.termino || "")}`,
     ...(duracaoLabel(c.inicio, c.termino)

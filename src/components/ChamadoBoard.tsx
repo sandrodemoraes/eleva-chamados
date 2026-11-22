@@ -15,6 +15,7 @@ import { HoraField } from "./HoraField";
 import { AudioSob } from "./AudioSob";
 import { ChecklistPanel } from "./ChecklistPanel";
 import { FotosPanel } from "./FotosPanel";
+import { ProdutosPanel } from "./ProdutosPanel";
 import { AssinaturaPanel } from "./AssinaturaPanel";
 import { HistoricoCliente } from "./HistoricoCliente";
 import { checklistDo, faltandoObrigatorios, lerChecklist } from "../lib/checklists";
@@ -76,7 +77,7 @@ function toEdit(c: Chamado): EditState {
   };
 }
 
-type Painel = "checklist" | "fotos" | "assinatura";
+type Painel = "checklist" | "fotos" | "produtos" | "assinatura";
 
 type Props = {
   refreshToken: number;
@@ -479,6 +480,20 @@ export function ChamadoBoard({
                 <>
                   <p className="endereco">{c.endereco || "Sem endereço"}</p>
                   {c.telefone && <p className="fone">{c.telefone}</p>}
+                  {painel[c.id] !== "produtos" && c.produtos?.trim() && (
+                    <div className="defeitos">
+                      <p className="defeitos-titulo">Produtos usados</p>
+                      <ul>
+                        {c.produtos
+                          .split("\n")
+                          .map((p) => p.trim())
+                          .filter(Boolean)
+                          .map((p, i) => (
+                            <li key={i}>{p}</li>
+                          ))}
+                      </ul>
+                    </div>
+                  )}
                   {(c.inicio || c.termino) && (
                     <p className="tempo">
                       Início: {formatHorarioLabel(c.inicio)} · Término:{" "}
@@ -512,6 +527,13 @@ export function ChamadoBoard({
                     </button>
                     <button
                       type="button"
+                      className={painel[c.id] === "produtos" ? "chip chip--on" : "chip"}
+                      onClick={() => alternarPainel(c.id, "produtos")}
+                    >
+                      Produtos ({c.produtos_count ?? 0})
+                    </button>
+                    <button
+                      type="button"
                       className={painel[c.id] === "fotos" ? "chip chip--on" : "chip"}
                       onClick={() => alternarPainel(c.id, "fotos")}
                     >
@@ -533,6 +555,9 @@ export function ChamadoBoard({
                       raw={c.checklist}
                       onSaved={load}
                     />
+                  )}
+                  {painel[c.id] === "produtos" && (
+                    <ProdutosPanel chamadoId={c.id} onChange={load} />
                   )}
                   {painel[c.id] === "fotos" && <FotosPanel chamadoId={c.id} onChange={load} />}
                   {painel[c.id] === "assinatura" && (
