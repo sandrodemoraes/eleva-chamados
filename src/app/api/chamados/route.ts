@@ -27,7 +27,12 @@ const LIST_COLUMNS = `
   atualizado_em, checklist, assinado_nome, assinado_em,
   (audio_base64 <> '') as tem_audio,
   (assinatura_base64 <> '') as tem_assinatura,
-  (select count(*)::int from fotos f where f.chamado_id = c.id) as fotos_count`;
+  (select count(*)::int from fotos f where f.chamado_id = c.id) as fotos_count,
+  (select count(*)::int from produtos p where p.chamado_id = c.id) as produtos_count,
+  (select coalesce(string_agg(
+     case when texto <> '' then texto else 'Foto do produto' end,
+     chr(10) order by criado_em
+   ), '') from produtos p where p.chamado_id = c.id) as produtos`;
 
 export async function GET(request: Request) {
   const identity = await requireIdentity(request);

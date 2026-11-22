@@ -36,6 +36,8 @@ export type Chamado = {
   checklist?: string;
   funcionarios: string;
   horario: string;
+  produtos?: string;
+  produtos_count?: number;
   inicio: string;
   termino: string;
   marcado: boolean;
@@ -97,6 +99,15 @@ export const SERVICOS = [
   "Manutenção",
   "Outro",
 ] as const;
+
+export type Produto = {
+  id: string;
+  chamado_id: string;
+  texto: string;
+  imagem_base64?: string;
+  criado_em: string;
+  criado_por_nome: string;
+};
 
 export type Foto = {
   id: string;
