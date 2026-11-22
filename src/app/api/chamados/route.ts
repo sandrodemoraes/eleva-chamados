@@ -4,6 +4,7 @@ import { sql } from "../../../lib/db";
 import { transcribeAudioDataUrl } from "../../../lib/transcribe";
 import { rateLimit } from "../../../lib/rate-limit";
 import { avisarChamadoAberto } from "../../../lib/push";
+import { ehPessoa } from "../../../lib/equipe";
 import { UUID_RE, nomeDe, tooLarge } from "../../../lib/server-utils";
 import type { Chamado, ChamadoInput, Urgencia } from "../../../lib/types";
 
@@ -123,7 +124,8 @@ export async function POST(request: Request) {
   // Id vindo do aparelho permite reenviar da fila offline sem duplicar.
   const id =
     typeof body.id === "string" && UUID_RE.test(body.id) ? body.id : randomUUID();
-  const nome = nomeDe(identity);
+  const pedido = asString(body.aberto_por, 120);
+  const nome = ehPessoa(pedido) ? pedido : nomeDe(identity);
 
   const inserted = await sql(
     `insert into chamados (

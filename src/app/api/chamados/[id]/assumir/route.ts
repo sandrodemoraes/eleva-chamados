@@ -1,5 +1,6 @@
 import { requireIdentity } from "../../../../../../cursor/identity";
 import { sql } from "../../../../../lib/db";
+import { ehDaEquipe } from "../../../../../lib/equipe";
 import type { Chamado } from "../../../../../lib/types";
 
 export const dynamic = "force-dynamic";
@@ -25,8 +26,11 @@ export async function POST(
 
   const tecnico =
     typeof body.tecnico === "string" ? body.tecnico.trim().slice(0, 120) : "";
-  if (!tecnico) {
-    return Response.json({ error: "Escolha o técnico" }, { status: 400 });
+  if (!ehDaEquipe(tecnico)) {
+    return Response.json(
+      { error: "Escolha um técnico de campo para pegar o chamado" },
+      { status: 400 },
+    );
   }
 
   // Só pega se ainda estiver em aberto: dois técnicos não ficam com o mesmo chamado.

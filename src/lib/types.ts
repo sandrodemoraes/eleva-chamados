@@ -65,6 +65,7 @@ export type ChamadoInput = {
   termino: string;
   marcado: boolean;
   aberto?: boolean;
+  aberto_por?: string;
   id?: string;
 };
 

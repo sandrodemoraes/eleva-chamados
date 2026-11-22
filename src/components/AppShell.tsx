@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ChamadoComposer } from "./ChamadoComposer";
 import { ChamadoBoard } from "./ChamadoBoard";
 import { AbertosAlert } from "./AbertosAlert";
-import { EQUIPE } from "../lib/equipe";
+import { EQUIPE, ESCRITORIO } from "../lib/equipe";
 import { useFila } from "../lib/outbox";
 import type { Chamado } from "../lib/types";
 
@@ -16,6 +16,7 @@ export function AppShell() {
   const [mode, setMode] = useState<Mode>("campo");
   const [refreshToken, setRefreshToken] = useState(0);
   const [tecnico, setTecnico] = useState("");
+  const [conta, setConta] = useState("");
   const [abrindo, setAbrindo] = useState(false);
 
   const fila = useFila();
@@ -28,6 +29,13 @@ export function AppShell() {
     if (new URLSearchParams(window.location.search).get("aba") === "abertos") {
       setMode("abertos");
     }
+    void fetch("/api/eu", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { name?: string; email?: string } | null) => {
+        if (!data) return;
+        setConta(data.email || data.name || "");
+      })
+      .catch(() => undefined);
   }, []);
 
   function escolherTecnico(nome: string) {
@@ -46,7 +54,10 @@ export function AppShell() {
   return (
     <div className="shell">
       <header className="top">
-        <p className="brand">ELEVA</p>
+        <div className="brand-block">
+          <p className="brand">ELEVA</p>
+          {conta && <p className="conta">Entrou com {conta}</p>}
+        </div>
         <nav className="modes" aria-label="Modo">
           <button
             type="button"
@@ -80,12 +91,24 @@ export function AppShell() {
           onChange={(e) => escolherTecnico(e.target.value)}
         >
           <option value="">Escolha seu nome</option>
-          {EQUIPE.map((nome) => (
-            <option key={nome} value={nome}>
-              {nome}
-            </option>
-          ))}
+          <optgroup label="Escritório">
+            {ESCRITORIO.map((nome) => (
+              <option key={nome} value={nome}>
+                {nome}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Campo">
+            {EQUIPE.map((nome) => (
+              <option key={nome} value={nome}>
+                {nome}
+              </option>
+            ))}
+          </optgroup>
         </select>
+        <p className="eu-sou-nota">
+          A entrada no app é a conta Cursor. Este nome só marca quem está no aparelho.
+        </p>
       </div>
 
       {(!fila.online || fila.qtd > 0) && (
@@ -114,7 +137,7 @@ export function AppShell() {
             Grave o áudio, marque os funcionários, o horário e envie. No
             escritório dá para editar o chamado durante o serviço.
           </p>
-          <ChamadoComposer onCreated={onCreated} />
+          <ChamadoComposer autor={tecnico} onCreated={onCreated} />
         </main>
       )}
 
@@ -153,7 +176,7 @@ export function AppShell() {
                   Fechar
                 </button>
               </div>
-              <ChamadoComposer modo="escritorio" onCreated={onCreated} />
+              <ChamadoComposer modo="escritorio" autor={tecnico} onCreated={onCreated} />
             </div>
           ) : (
             <button
