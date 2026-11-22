@@ -239,7 +239,7 @@ export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
         </span>
         <textarea
           rows={4}
-          value={`${form.transcricao}${interim ? ` ${interim}` : ""}`.trim()}
+          value={interim ? `${form.transcricao} ${interim}`.trimStart() : form.transcricao}
           onChange={(e) => onTranscricaoEdit(e.target.value)}
           placeholder="O que foi falado aparece aqui…"
         />
