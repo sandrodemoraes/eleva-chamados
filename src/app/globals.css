@@ -66,6 +66,10 @@ body::before {
   animation: rise 0.55s ease both;
 }
 
+.brand-block {
+  min-width: 0;
+}
+
 .brand {
   margin: 0;
   font-family: var(--font-display);
@@ -73,6 +77,12 @@ body::before {
   font-size: clamp(1.8rem, 6vw, 2.4rem);
   letter-spacing: 0.08em;
   line-height: 1;
+}
+
+.conta {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
 }
 
 .modes {
@@ -528,11 +538,19 @@ body::before {
 
 .eu-sou {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
   margin: 0.75rem 0 0;
   font-size: 0.9rem;
   color: var(--ink-soft);
+}
+
+.eu-sou-nota {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
 }
 
 .eu-sou select {

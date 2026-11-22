@@ -18,6 +18,7 @@ import { FotosPanel } from "./FotosPanel";
 import { AssinaturaPanel } from "./AssinaturaPanel";
 import { HistoricoCliente } from "./HistoricoCliente";
 import { checklistDo, faltandoObrigatorios, lerChecklist } from "../lib/checklists";
+import { ehDoEscritorio } from "../lib/equipe";
 import { enviar } from "../lib/outbox";
 
 const FILTERS: { id: string; label: string; status?: ChamadoStatus }[] = [
@@ -194,8 +195,12 @@ export function ChamadoBoard({
   }
 
   async function assumir(id: string) {
-    if (!tecnico) {
-      setError("Escolha seu nome em “Eu sou” no topo para pegar o chamado.");
+    if (!tecnico || ehDoEscritorio(tecnico)) {
+      setError(
+        ehDoEscritorio(tecnico)
+          ? "Esse nome é do escritório. Escolha o técnico de campo que vai pegar o chamado."
+          : "Escolha seu nome em “Eu sou” no topo para pegar o chamado.",
+      );
       return;
     }
     if (!navigator.onLine) {

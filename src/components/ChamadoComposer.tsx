@@ -15,6 +15,7 @@ import { SERVICOS } from "../lib/types";
 type Props = {
   onCreated: (chamado?: Chamado) => void;
   modo?: "campo" | "escritorio";
+  autor?: string;
 };
 
 const empty: ChamadoInput = {
@@ -72,7 +73,7 @@ function aplicarIA(prev: ChamadoInput, c: CamposIA): ChamadoInput {
   };
 }
 
-export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
+export function ChamadoComposer({ onCreated, modo = "campo", autor = "" }: Props) {
   const [form, setForm] = useState<ChamadoInput>(empty);
   const [aberto, setAberto] = useState(modo === "escritorio");
   const [interim, setInterim] = useState("");
@@ -186,7 +187,7 @@ export function ChamadoComposer({ onCreated, modo = "campo" }: Props) {
       const result = await enviar<{ chamado: Chamado }>(
         "/api/chamados",
         "POST",
-        { ...form, aberto, id: novoId() },
+        { ...form, aberto, aberto_por: autor, id: novoId() },
         `Chamado ${form.cliente || "sem cliente"}`,
       );
       if ("ok" in result && !result.ok) {
