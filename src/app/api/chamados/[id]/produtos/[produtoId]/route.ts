@@ -1,4 +1,4 @@
-import { requireIdentity } from "../../../../../../../cursor/identity";
+import { requireAcesso } from "../../../../../../lib/acesso";
 import { sql } from "../../../../../../lib/db";
 import { validId } from "../../../../../../lib/server-utils";
 
@@ -8,7 +8,7 @@ export async function DELETE(
   request: Request,
   context: { params: Promise<{ id: string; produtoId: string }> },
 ) {
-  const identity = await requireIdentity(request);
+  const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
 
   const { id, produtoId } = await context.params;

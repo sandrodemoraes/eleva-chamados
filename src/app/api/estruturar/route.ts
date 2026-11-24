@@ -1,4 +1,4 @@
-import { requireIdentity } from "../../../../cursor/identity";
+import { requireAcesso } from "../../../lib/acesso";
 import { estruturarTexto } from "../../../lib/estruturar";
 import { rateLimit } from "../../../lib/rate-limit";
 import { tooLarge } from "../../../lib/server-utils";
@@ -6,7 +6,7 @@ import { tooLarge } from "../../../lib/server-utils";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const identity = await requireIdentity(request);
+  const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
   if (tooLarge(request, 20_000)) {
     return Response.json({ error: "Texto grande demais" }, { status: 413 });

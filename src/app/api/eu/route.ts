@@ -1,15 +1,16 @@
-import { requireIdentity } from "../../../../cursor/identity";
+import { requireAcesso } from "../../../lib/acesso";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const identity = await requireIdentity(request);
+  const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
 
   return Response.json(
     {
       name: identity.name,
       email: identity.kind === "person" ? identity.email : "",
+      por: identity.sub === "acesso:escritorio" ? "senha" : "conta",
     },
     { headers: { "cache-control": "private, no-store" } },
   );

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { requireIdentity } from "../../../../../../cursor/identity";
+import { requireAcesso } from "../../../../../lib/acesso";
 import { sql } from "../../../../../lib/db";
 import { rateLimit } from "../../../../../lib/rate-limit";
 import { UUID_RE, nomeDe, tooLarge, validId } from "../../../../../lib/server-utils";
@@ -22,7 +22,7 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const identity = await requireIdentity(request);
+  const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
   const { id } = await context.params;
   if (!validId(id)) {
@@ -44,7 +44,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const identity = await requireIdentity(request);
+  const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
   if (tooLarge(request, MAX_IMAGEM + 20_000)) {
     return Response.json({ error: "Produto grande demais" }, { status: 413 });

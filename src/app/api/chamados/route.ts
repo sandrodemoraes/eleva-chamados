@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { requireIdentity } from "../../../../cursor/identity";
+import { requireAcesso } from "../../../lib/acesso";
 import { sql } from "../../../lib/db";
 import { transcribeAudioDataUrl } from "../../../lib/transcribe";
 import { rateLimit } from "../../../lib/rate-limit";
@@ -41,7 +41,7 @@ const LIST_COLUMNS = `
   (select sum(valor) from produtos p where p.chamado_id = c.id) as produtos_total`;
 
 export async function GET(request: Request) {
-  const identity = await requireIdentity(request);
+  const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
 
   const url = new URL(request.url);
@@ -78,7 +78,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const identity = await requireIdentity(request);
+  const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
 
   if (tooLarge(request, 1_200_000)) {
