@@ -726,6 +726,22 @@ body::before {
   gap: 0.75rem;
   max-width: 24rem;
 }
+.senhas {
+  margin: 0.5rem 1rem 1rem;
+  display: grid;
+  gap: 0.65rem;
+}
+.senha-linha {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+@media (max-width: 520px) {
+  .senha-linha {
+    grid-template-columns: 1fr;
+  }
+}
 .valores {
   margin: 0.75rem 0;
   padding: 0.75rem;

@@ -1,31 +1,19 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
-import { getIdentity } from "../../cursor/identity";
+import { getIdentity, requireTeamRole } from "../../cursor/identity";
+import { lerSessao } from "./usuarios";
 
 const COOKIE = "eleva_acesso";
-const SELO = "eleva-acesso-v1";
+
+export type PapelAcesso = "campo" | "escritorio" | "conta";
 
 export type Usuario = {
   sub: string;
   name: string;
   email: string;
   kind: "person" | "key";
+  papel: PapelAcesso;
 };
 
 const noStore = { "cache-control": "private, no-store" };
-
-export function senhaDoEscritorio(): string {
-  return (process.env.ACESSO_SENHA ?? "").trim();
-}
-
-function selo(senha: string): Buffer {
-  return createHmac("sha256", senha).update(SELO).digest();
-}
-
-function iguais(a: string, b: string): boolean {
-  const ha = createHmac("sha256", SELO).update(a).digest();
-  const hb = createHmac("sha256", SELO).update(b).digest();
-  return timingSafeEqual(ha, hb);
-}
 
 function lerCookie(request: Request, nome: string): string {
   const raw = request.headers.get("cookie") ?? "";
@@ -34,14 +22,6 @@ function lerCookie(request: Request, nome: string): string {
     if (chave === nome) return decodeURIComponent(resto.join("="));
   }
   return "";
-}
-
-export async function sessaoValida(request: Request): Promise<boolean> {
-  const senha = senhaDoEscritorio();
-  const got = lerCookie(request, COOKIE);
-  if (!senha || !got) return false;
-  const esperado = selo(senha).toString("base64url");
-  return iguais(got, esperado);
 }
 
 function seguro(request: Request): boolean {
@@ -53,10 +33,9 @@ function seguro(request: Request): boolean {
   }
 }
 
-export function cabecalhoSessao(senha: string, request: Request): string {
-  const valor = selo(senha).toString("base64url");
+export function cabecalhoSessao(token: string, request: Request): string {
   const partes = [
-    `${COOKIE}=${valor}`,
+    `${COOKIE}=${token}`,
     "HttpOnly",
     "SameSite=Lax",
     "Path=/",
@@ -72,33 +51,56 @@ export function cabecalhoSair(request: Request): string {
   return partes.join("; ");
 }
 
-export function senhaConfere(digitada: string): boolean {
-  const esperada = senhaDoEscritorio();
-  if (!esperada || !digitada) return false;
-  return iguais(digitada, esperada);
+export function podeDefinirSenhas(usuario: Usuario): boolean {
+  return usuario.papel === "conta" || usuario.papel === "escritorio";
 }
 
-/** Conta Cursor, quando existe, ou a senha do escritório no app público. */
-export async function requireAcesso(request: Request): Promise<Usuario | Response> {
+/** Sessão de uma pessoa da equipe, ou a conta Cursor de quem já passou no portão privado ou do time. */
+export async function lerAcesso(request: Request): Promise<Usuario | undefined> {
+  const token = lerCookie(request, COOKIE);
+  if (token) {
+    const sessao = await lerSessao(token);
+    if (sessao) {
+      return {
+        sub: `usuario:${sessao.id}`,
+        name: sessao.nome,
+        email: "",
+        kind: "person",
+        papel: sessao.papel,
+      };
+    }
+  }
+
   const identity = await getIdentity(request);
-  if (identity.verified) {
+  if (!identity.verified || identity.kind !== "person") return undefined;
+  if (identity.appVisibility === "private") {
     return {
       sub: identity.sub,
       name: identity.name,
-      email: identity.kind === "person" ? identity.email : "",
-      kind: identity.kind,
-    };
-  }
-  if (await sessaoValida(request)) {
-    return {
-      sub: "acesso:escritorio",
-      name: "Equipe Eleva",
-      email: "",
+      email: identity.email,
       kind: "person",
+      papel: "conta",
     };
   }
+  if (identity.appVisibility === "team") {
+    const membro = requireTeamRole(identity, ["admin", "member"]);
+    if (membro instanceof Response) return undefined;
+    return {
+      sub: identity.sub,
+      name: identity.name,
+      email: identity.email,
+      kind: "person",
+      papel: "conta",
+    };
+  }
+  return undefined;
+}
+
+export async function requireAcesso(request: Request): Promise<Usuario | Response> {
+  const usuario = await lerAcesso(request);
+  if (usuario) return usuario;
   return Response.json(
-    { error: "Entre com a senha do escritório." },
+    { error: "Entre com seu usuário." },
     { status: 401, headers: noStore },
   );
 }

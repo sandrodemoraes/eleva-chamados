@@ -1,4 +1,4 @@
-import { requireAcesso } from "../../../lib/acesso";
+import { podeDefinirSenhas, requireAcesso } from "../../../lib/acesso";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,9 @@ export async function GET(request: Request) {
     {
       name: identity.name,
       email: identity.kind === "person" ? identity.email : "",
-      por: identity.sub === "acesso:escritorio" ? "senha" : "conta",
+      por: identity.sub.startsWith("usuario:") ? "senha" : "conta",
+      papel: identity.papel,
+      podeSenhas: podeDefinirSenhas(identity),
     },
     { headers: { "cache-control": "private, no-store" } },
   );
