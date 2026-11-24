@@ -20,6 +20,7 @@ export function AppShell() {
   const [tecnico, setTecnico] = useState("");
   const [conta, setConta] = useState("");
   const [abrindo, setAbrindo] = useState(false);
+  const [novoCampo, setNovoCampo] = useState(false);
   const [liberado, setLiberado] = useState<boolean | null>(null);
   const [porSenha, setPorSenha] = useState(false);
   const [podeSenhas, setPodeSenhas] = useState(false);
@@ -73,6 +74,8 @@ export function AppShell() {
 
   function onCreated(_chamado?: Chamado) {
     refresh();
+    setAbrindo(false);
+    setNovoCampo(false);
   }
 
   async function sair() {
@@ -197,14 +200,27 @@ export function AppShell() {
             Chamados que você pegou. Anote o produto, o valor e o
             deslocamento durante a execução. O mínimo de cada chamado é R$ 150.
           </p>
+          {novoCampo ? (
+            <div className="abrir-box">
+              <div className="abrir-head">
+                <h2>Novo chamado</h2>
+                <button type="button" className="ghost" onClick={() => setNovoCampo(false)}>
+                  Fechar
+                </button>
+              </div>
+              <ChamadoComposer autor={tecnico} onCreated={onCreated} />
+            </div>
+          ) : (
+            <button type="button" className="primary abrir-btn" onClick={() => setNovoCampo(true)}>
+              Novo chamado
+            </button>
+          )}
           <ChamadoBoard
             key="campo"
             refreshToken={refreshToken}
             tecnico={tecnico}
             initialFilter="em_andamento"
           />
-          <h2 className="headline headline--sm">Anote outro chamado falando</h2>
-          <ChamadoComposer autor={tecnico} onCreated={onCreated} />
         </main>
       )}
 
@@ -235,7 +251,7 @@ export function AppShell() {
           {abrindo ? (
             <div className="abrir-box">
               <div className="abrir-head">
-                <h2>Abrir chamado</h2>
+                <h2>Novo chamado</h2>
                 <button
                   type="button"
                   className="ghost"
@@ -252,7 +268,7 @@ export function AppShell() {
               className="primary abrir-btn"
               onClick={() => setAbrindo(true)}
             >
-              + Abrir chamado
+              Novo chamado
             </button>
           )}
           <ChamadoBoard
