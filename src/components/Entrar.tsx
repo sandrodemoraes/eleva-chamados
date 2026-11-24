@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { EQUIPE, ESCRITORIO } from "../lib/equipe";
 
-export function Entrar({ onEntrou }: { onEntrou: (nome: string) => void }) {
+export function Entrar({ onEntrou }: { onEntrou: (nome: string, podeSenhas: boolean) => void }) {
   const [nome, setNome] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
@@ -19,12 +19,12 @@ export function Entrar({ onEntrou }: { onEntrou: (nome: string) => void }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ nome, senha }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as { error?: string; papel?: string };
       if (!res.ok) {
         setErro(data.error || "Não foi possível entrar.");
         return;
       }
-      onEntrou(nome);
+      onEntrou(nome, data.papel === "escritorio" || data.papel === "admin");
     } catch {
       setErro("Sem conexão. Tente de novo.");
     } finally {

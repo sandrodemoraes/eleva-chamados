@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ChamadoComposer } from "./ChamadoComposer";
 import { ChamadoBoard } from "./ChamadoBoard";
 import { AbertosAlert } from "./AbertosAlert";
-import { EQUIPE, ESCRITORIO, ehDoEscritorio } from "../lib/equipe";
+import { EQUIPE, ESCRITORIO } from "../lib/equipe";
 import { Entrar } from "./Entrar";
 import { SenhasUsuarios } from "./SenhasUsuarios";
 import { useFila } from "../lib/outbox";
@@ -92,10 +92,10 @@ export function AppShell() {
         </header>
         {liberado === false ? (
           <Entrar
-            onEntrou={(nome) => {
+            onEntrou={(nome, podeSenhas) => {
               setLiberado(true);
               setPorSenha(true);
-              setPodeSenhas(ehDoEscritorio(nome));
+              setPodeSenhas(podeSenhas);
               setConta(nome);
               setTecnico(nome);
               localStorage.setItem(TECNICO_KEY, nome);

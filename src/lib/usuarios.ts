@@ -5,7 +5,7 @@ export type UsuarioRow = {
   id: string;
   nome: string;
   senha_hash: string;
-  papel: "campo" | "escritorio";
+  papel: "campo" | "escritorio" | "admin";
 };
 
 const SELO = "eleva-usuario-v2";

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Pessoa = { nome: string; papel: "campo" | "escritorio"; temSenha: boolean };
+type Pessoa = { nome: string; papel: "campo" | "escritorio" | "admin"; temSenha: boolean };
 
 export function SenhasUsuarios() {
   const [pessoas, setPessoas] = useState<Pessoa[] | null>(null);
