@@ -153,6 +153,16 @@ body::before {
   max-width: 100%;
   height: 2.5rem;
 }
+.audio-linha {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.35rem 0;
+}
+.audio-linha .audio-preview {
+  flex: 1;
+  min-width: 0;
+}
 
 .equipe {
   display: grid;
@@ -768,6 +778,9 @@ body::before {
   color: var(--accent-deep);
 }
 
+.produtos-bloco {
+  margin: 0.75rem 0;
+}
 .produto-campos {
   display: grid;
   grid-template-columns: 1fr minmax(7rem, 9rem);

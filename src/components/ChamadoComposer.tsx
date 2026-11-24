@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { VoiceCapture } from "./VoiceCapture";
+import { AudioPlayer } from "./AudioPlayer";
 import { EquipePicker } from "./EquipePicker";
 import { HoraField } from "./HoraField";
 import { HistoricoAviso } from "./HistoricoCliente";
@@ -222,9 +223,7 @@ export function ChamadoComposer({ onCreated, modo = "campo", autor = "" }: Props
         disabled={pending || transcribing}
       />
 
-      {form.audio_base64 && (
-        <audio controls src={form.audio_base64} className="audio-preview" />
-      )}
+      {form.audio_base64 && <AudioPlayer src={form.audio_base64} />}
 
       <label className="field">
         <span className="field-head">

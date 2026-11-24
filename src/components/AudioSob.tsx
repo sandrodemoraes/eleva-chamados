@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AudioPlayer } from "./AudioPlayer";
 
 /** Só baixa o áudio quando alguém toca para ouvir. */
 export function AudioSob({ chamadoId }: { chamadoId: string }) {
@@ -21,7 +22,14 @@ export function AudioSob({ chamadoId }: { chamadoId: string }) {
   }
 
   if (src) {
-    return <audio controls autoPlay src={src} className="audio-preview" />;
+    return (
+      <div className="audio-linha">
+        <AudioPlayer src={src} autoPlay onParou={() => setSrc("")} />
+        <button type="button" className="chip" onClick={() => setSrc("")}>
+          Parar
+        </button>
+      </div>
+    );
   }
   return (
     <button
@@ -30,7 +38,11 @@ export function AudioSob({ chamadoId }: { chamadoId: string }) {
       disabled={estado === "loading"}
       onClick={() => void carregar()}
     >
-      {estado === "loading" ? "Carregando áudio…" : estado === "erro" ? "Tentar ouvir de novo" : "▶ Ouvir áudio"}
+      {estado === "loading"
+        ? "Carregando áudio…"
+        : estado === "erro"
+          ? "Tentar ouvir de novo"
+          : "▶ Ouvir áudio"}
     </button>
   );
 }

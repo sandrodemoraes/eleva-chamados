@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { aoSairDaTela } from "../lib/ao-sair";
 import { formatarReais } from "../lib/parse-chamado";
 import { enviar, novoId } from "../lib/outbox";
 import type { Produto } from "../lib/types";
@@ -119,11 +120,22 @@ export function ProdutosPanel({ chamadoId, onChange }: Props) {
   }, [carregar]);
 
   useEffect(() => {
-    return () => {
+    function encerrar() {
       wantRef.current = false;
       recognitionRef.current?.stop();
-      recorderRef.current?.stop();
+      recognitionRef.current = null;
+      const recorder = recorderRef.current;
+      if (recorder && recorder.state !== "inactive") recorder.stop();
+      recorderRef.current = null;
       streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      setOuvindo(false);
+      setInterim("");
+    }
+    const sair = aoSairDaTela(encerrar);
+    return () => {
+      sair();
+      encerrar();
     };
   }, []);
 
@@ -226,13 +238,7 @@ export function ProdutosPanel({ chamadoId, onChange }: Props) {
         if (finaisRef.current.trim()) setTexto(juntar(base, finaisRef.current));
       };
       recognition.onend = () => {
-        if (wantRef.current) {
-          try {
-            recognition.start();
-          } catch {
-            /* reinício disputado */
-          }
-        }
+        /* não chama start de novo: o ditado não fica recomeçando */
       };
       recognitionRef.current = recognition;
       try {
