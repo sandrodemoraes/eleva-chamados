@@ -1,5 +1,6 @@
 import { requireAcesso } from "../../../../lib/acesso";
 import { sql } from "../../../../lib/db";
+import { rateLimit } from "../../../../lib/rate-limit";
 import type {
   Chamado,
   ChamadoEdit,
@@ -198,4 +199,33 @@ export async function PATCH(
     { chamado: updated[0] },
     { headers: { "cache-control": "private, no-store" } },
   );
+}
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const identity = await requireIdentity(request);
+  if (identity instanceof Response) return identity;
+  if (!rateLimit(`excluir:${identity.sub}`, 20, 60_000)) {
+    return Response.json({ error: "Muitas exclusões. Aguarde um minuto." }, { status: 429 });
+  }
+
+  const { id } = await context.params;
+  if (!id || id.length > 80) {
+    return Response.json({ error: "id inválido" }, { status: 400 });
+  }
+
+  const removed = await sql<{ id: string }>(
+    `delete from chamados where id = $1 returning id`,
+    [id],
+  );
+  if (removed.length === 0) {
+    return Response.json({ error: "não encontrado" }, { status: 404 });
+  }
+
+  return new Response(null, {
+    status: 204,
+    headers: { "cache-control": "private, no-store" },
+  });
 }

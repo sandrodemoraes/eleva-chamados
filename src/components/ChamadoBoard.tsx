@@ -177,6 +177,23 @@ export function ChamadoBoard({
     await salvarCampos(c.id, campos, "Serviço feito");
   }
 
+  async function excluir(c: Chamado) {
+    const nome = c.cliente || "este chamado";
+    if (!window.confirm(`Excluir o chamado de ${nome}? Essa ação não desfaz.`)) return;
+    setBusyId(c.id);
+    setError("");
+    const r = await enviar(`/api/chamados/${c.id}`, "DELETE", {}, "Excluir chamado");
+    setBusyId(null);
+    if ("ok" in r && !r.ok) {
+      setError(r.error);
+      return;
+    }
+    setItems((prev) => prev.filter((item) => item.id !== c.id));
+    if ("queued" in r) {
+      setAviso("Sem internet: a exclusão ficou guardada e sai quando o sinal voltar.");
+    }
+  }
+
   async function copyNota(c: Chamado) {
     const text = textoParaNota(c);
     try {
@@ -624,6 +641,14 @@ export function ChamadoBoard({
                       onClick={() => startEdit(c)}
                     >
                       Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost"
+                      disabled={busyId === c.id}
+                      onClick={() => void excluir(c)}
+                    >
+                      Excluir
                     </button>
                     <button
                       type="button"
