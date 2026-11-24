@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { aoSairDaTela } from "../lib/ao-sair";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -64,11 +65,21 @@ export function VoiceCapture({ onTranscript, onAudio, disabled }: Props) {
   }, []);
 
   useEffect(() => {
-    return () => {
+    function encerrar() {
       wantListen.current = false;
       recognitionRef.current?.stop();
-      mediaRecorderRef.current?.stop();
+      recognitionRef.current = null;
+      const recorder = mediaRecorderRef.current;
+      if (recorder && recorder.state !== "inactive") recorder.stop();
+      mediaRecorderRef.current = null;
       streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      setListening(false);
+    }
+    const sair = aoSairDaTela(encerrar);
+    return () => {
+      sair();
+      encerrar();
     };
   }, []);
 
@@ -147,13 +158,7 @@ export function VoiceCapture({ onTranscript, onAudio, disabled }: Props) {
         }
       };
       recognition.onend = () => {
-        if (wantListen.current) {
-          try {
-            recognition.start();
-          } catch {
-            /* ignore restart race */
-          }
-        }
+        /* não chama start de novo: o ditado não fica recomeçando */
       };
       recognitionRef.current = recognition;
       try {
