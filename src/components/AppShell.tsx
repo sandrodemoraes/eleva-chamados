@@ -4,8 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { ChamadoComposer } from "./ChamadoComposer";
 import { ChamadoBoard } from "./ChamadoBoard";
 import { AbertosAlert } from "./AbertosAlert";
-import { EQUIPE, ESCRITORIO, ehDoEscritorio } from "../lib/equipe";
+import { EQUIPE, ESCRITORIO } from "../lib/equipe";
 import { Entrar } from "./Entrar";
+import { MinhaSenha } from "./MinhaSenha";
 import { SenhasUsuarios } from "./SenhasUsuarios";
 import { useFila } from "../lib/outbox";
 import type { Chamado } from "../lib/types";
@@ -92,10 +93,10 @@ export function AppShell() {
         </header>
         {liberado === false ? (
           <Entrar
-            onEntrou={(nome) => {
+            onEntrou={(nome, papel) => {
               setLiberado(true);
               setPorSenha(true);
-              setPodeSenhas(ehDoEscritorio(nome));
+              setPodeSenhas(papel === "admin");
               setConta(nome);
               setTecnico(nome);
               localStorage.setItem(TECNICO_KEY, nome);
@@ -164,6 +165,7 @@ export function AppShell() {
             ))}
           </optgroup>
         </select>
+        {porSenha && <MinhaSenha />}
         {porSenha && (
           <button type="button" className="link-btn" onClick={sair}>
             Sair

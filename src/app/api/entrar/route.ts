@@ -1,11 +1,25 @@
 import { cabecalhoSessao } from "../../../lib/acesso";
 import { rateLimit } from "../../../lib/rate-limit";
 import { tooLarge } from "../../../lib/server-utils";
-import { emitirSessao, senhaConfereHash, usuarioPorNome } from "../../../lib/usuarios";
+import { emitirSessao, listarUsuarios, senhaConfereHash, usuarioPorNome } from "../../../lib/usuarios";
 
 export const dynamic = "force-dynamic";
 
 const noStore = { "cache-control": "private, no-store" };
+
+export async function GET() {
+  const rows = await listarUsuarios();
+  return Response.json(
+    {
+      usuarios: rows.map((row) => ({
+        nome: row.nome,
+        papel: row.papel,
+        temSenha: row.senha_hash !== "",
+      })),
+    },
+    { headers: noStore },
+  );
+}
 
 export async function POST(request: Request) {
   if (tooLarge(request, 2_000)) {
@@ -41,7 +55,7 @@ export async function POST(request: Request) {
   }
   if (!usuario.senha_hash) {
     return Response.json(
-      { error: "Esta pessoa ainda não tem senha. Defina na conta de quem administra o app." },
+      { error: "Esta pessoa ainda não tem senha. Crie a sua senha." },
       { status: 403, headers: noStore },
     );
   }
