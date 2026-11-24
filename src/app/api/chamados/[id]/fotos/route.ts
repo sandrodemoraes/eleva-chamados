@@ -63,7 +63,7 @@ export async function POST(
   if (tooLarge(request, MAX_IMAGEM + 10_000)) {
     return Response.json({ error: "Foto grande demais" }, { status: 413 });
   }
-  if (!rateLimit(`fotos:${identity.sub}`, 60, 60_000)) {
+  if (!(await rateLimit(`fotos:${identity.sub}`, 60, 60_000))) {
     return Response.json({ error: "Muitas fotos. Aguarde um minuto." }, { status: 429 });
   }
   const { id } = await context.params;

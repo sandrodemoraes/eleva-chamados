@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
 
-  if (!rateLimit(`transcribe:${identity.sub}`, 20, 60_000)) {
+  if (!(await rateLimit(`transcribe:${identity.sub}`, 10, 60_000)) || !(await rateLimit("ia:global", 30, 60 * 60_000))) {
     return Response.json(
       { error: "Muitas transcrições. Aguarde um minuto." },
       { status: 429 },

@@ -49,7 +49,7 @@ export async function POST(
   if (tooLarge(request, MAX_IMAGEM + 20_000)) {
     return Response.json({ error: "Produto grande demais" }, { status: 413 });
   }
-  if (!rateLimit(`produtos:${identity.sub}`, 40, 60_000)) {
+  if (!(await rateLimit(`produtos:${identity.sub}`, 40, 60_000))) {
     return Response.json({ error: "Muitos produtos. Aguarde um minuto." }, { status: 429 });
   }
 

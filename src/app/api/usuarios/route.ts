@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   if (!podeDefinirSenhas(usuario)) {
     return Response.json({ error: "Sem permissão." }, { status: 403, headers: noStore });
   }
-  if (!rateLimit(`senha:${usuario.sub}`, 30, 60_000)) {
+  if (!(await rateLimit(`senha:${usuario.sub}`, 30, 60_000))) {
     return Response.json({ error: "Muitas alterações. Espere um minuto." }, { status: 429, headers: noStore });
   }
 
@@ -47,8 +47,8 @@ export async function POST(request: Request) {
   }
   const nome = typeof body.nome === "string" ? body.nome.trim() : "";
   const senha = typeof body.senha === "string" ? body.senha : "";
-  if (senha.length < 4 || senha.length > 80) {
-    return Response.json({ error: "A senha precisa ter de 4 a 80 caracteres." }, { status: 400, headers: noStore });
+  if (senha.length < 8 || senha.length > 80) {
+    return Response.json({ error: "A senha precisa ter de 8 a 80 caracteres." }, { status: 400, headers: noStore });
   }
   const ok = await definirSenha(nome, senha);
   if (!ok) {

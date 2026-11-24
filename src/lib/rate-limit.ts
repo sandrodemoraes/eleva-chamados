@@ -1,18 +1,15 @@
-const hits = new Map<string, { count: number; resetAt: number }>();
+import { sql } from "./db";
 
-/** Limite simples em memória por chave (ex.: identity.sub). */
-export function rateLimit(
-  key: string,
-  limit: number,
-  windowMs: number,
-): boolean {
+/** Limite no banco, compartilhado entre processos e reinícios. */
+export async function rateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
   const now = Date.now();
-  const row = hits.get(key);
-  if (!row || now >= row.resetAt) {
-    hits.set(key, { count: 1, resetAt: now + windowMs });
-    return true;
-  }
-  if (row.count >= limit) return false;
-  row.count += 1;
-  return true;
+  const rows = await sql<{ contagem: number }>(
+    `insert into limites (chave, contagem, zera_em) values ($1, 1, $2)
+     on conflict (chave) do update set
+       contagem = case when limites.zera_em <= $3 then 1 else limites.contagem + 1 end,
+       zera_em = case when limites.zera_em <= $3 then $2 else limites.zera_em end
+     returning contagem`,
+    [key, now + windowMs, now],
+  );
+  return Number(rows[0]?.contagem ?? 1) <= limit;
 }

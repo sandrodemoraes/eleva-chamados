@@ -84,7 +84,7 @@ export async function POST(request: Request) {
   if (tooLarge(request, 1_200_000)) {
     return Response.json({ error: "Chamado grande demais" }, { status: 413 });
   }
-  if (!rateLimit(`criar:${identity.sub}`, 30, 60_000)) {
+  if (!(await rateLimit(`criar:${identity.sub}`, 30, 60_000))) {
     return Response.json(
       { error: "Muitos chamados seguidos. Aguarde um minuto." },
       { status: 429 },

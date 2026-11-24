@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   if (tooLarge(request, 20_000)) {
     return Response.json({ error: "Texto grande demais" }, { status: 413 });
   }
-  if (!rateLimit(`ia:${identity.sub}`, 20, 60_000)) {
+  if (!(await rateLimit(`ia:${identity.sub}`, 10, 60_000)) || !(await rateLimit("ia:global", 30, 60 * 60_000))) {
     return Response.json({ error: "Muitos pedidos. Aguarde um minuto." }, { status: 429 });
   }
 

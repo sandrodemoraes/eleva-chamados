@@ -1,5 +1,5 @@
-import { getIdentity, requireTeamRole } from "../../cursor/identity";
-import { lerSessao } from "./usuarios";
+import { getIdentity } from "../../cursor/identity";
+import { lerSessao, revogarSessao } from "./usuarios";
 
 const COOKIE = "eleva_acesso";
 
@@ -51,8 +51,15 @@ export function cabecalhoSair(request: Request): string {
   return partes.join("; ");
 }
 
+const DONOS = new Set(["sandro.demoraes@gmail.com"]);
+
+export function ehDonoCursor(email: string): boolean {
+  return DONOS.has(email.trim().toLowerCase());
+}
+
 export function podeDefinirSenhas(usuario: Usuario): boolean {
-  return usuario.papel === "conta" || usuario.papel === "escritorio" || usuario.papel === "admin";
+  if (usuario.papel === "admin" && usuario.sub.startsWith("usuario:")) return true;
+  return usuario.papel === "conta" && ehDonoCursor(usuario.email);
 }
 
 /** Pessoa que entrou com o próprio nome e senha. */
@@ -70,34 +77,29 @@ export async function lerSessaoAcesso(request: Request): Promise<Usuario | undef
   };
 }
 
-/** Sessão de uma pessoa da equipe, ou a conta Cursor de quem já passou no portão privado ou do time. */
+/** Sessão da equipe, ou a conta Cursor do dono do app. */
 export async function lerAcesso(request: Request): Promise<Usuario | undefined> {
   const sessao = await lerSessaoAcesso(request);
   if (sessao) return sessao;
 
   const identity = await getIdentity(request);
   if (!identity.verified || identity.kind !== "person") return undefined;
-  if (identity.appVisibility === "private") {
-    return {
-      sub: identity.sub,
-      name: identity.name,
-      email: identity.email,
-      kind: "person",
-      papel: "conta",
-    };
-  }
-  if (identity.appVisibility === "team") {
-    const membro = requireTeamRole(identity, ["admin", "member"]);
-    if (membro instanceof Response) return undefined;
-    return {
-      sub: identity.sub,
-      name: identity.name,
-      email: identity.email,
-      kind: "person",
-      papel: "conta",
-    };
-  }
-  return undefined;
+  if (!ehDonoCursor(identity.email)) return undefined;
+  if (identity.appVisibility !== "private" && identity.appVisibility !== "team") return undefined;
+  return {
+    sub: identity.sub,
+    name: identity.name,
+    email: identity.email,
+    kind: "person",
+    papel: "conta",
+  };
+}
+
+export async function encerrarSessao(request: Request): Promise<void> {
+  const token = lerCookie(request, COOKIE);
+  if (!token) return;
+  const sessao = await lerSessao(token);
+  if (sessao) await revogarSessao(sessao.id);
 }
 
 export async function requireAcesso(request: Request): Promise<Usuario | Response> {

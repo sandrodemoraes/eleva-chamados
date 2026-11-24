@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   if (tooLarge(request, 8_000)) {
     return Response.json({ error: "grande demais" }, { status: 413 });
   }
-  if (!rateLimit(`push:${identity.sub}`, 10, 60_000)) {
+  if (!(await rateLimit(`push:${identity.sub}`, 10, 60_000))) {
     return Response.json({ error: "Aguarde um minuto." }, { status: 429 });
   }
 

@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   if (tooLarge(request, 2_000)) {
     return Response.json({ error: "Pedido grande demais." }, { status: 413, headers: noStore });
   }
-  if (!rateLimit("entrar:global", 60, 60_000)) {
+  if (!(await rateLimit("entrar:global", 60, 60_000))) {
     return Response.json(
       { error: "Muitas tentativas. Espere um minuto." },
       { status: 429, headers: noStore },
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   if (!nome || nome.length > 120) {
     return Response.json({ error: "Escolha seu nome." }, { status: 400, headers: noStore });
   }
-  if (!rateLimit(`entrar:${nome}`, 8, 10 * 60_000)) {
+  if (!(await rateLimit(`entrar:${nome}`, 8, 10 * 60_000))) {
     return Response.json(
       { error: "Muitas tentativas para este nome. Espere um pouco." },
       { status: 429, headers: noStore },

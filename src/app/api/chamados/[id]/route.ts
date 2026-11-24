@@ -207,7 +207,7 @@ export async function DELETE(
 ) {
   const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
-  if (!rateLimit(`excluir:${identity.sub}`, 20, 60_000)) {
+  if (!(await rateLimit(`excluir:${identity.sub}`, 20, 60_000))) {
     return Response.json({ error: "Muitas exclusões. Aguarde um minuto." }, { status: 429 });
   }
 

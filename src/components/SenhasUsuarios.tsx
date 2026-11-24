@@ -52,7 +52,7 @@ export function SenhasUsuarios() {
       </button>
       {aberto && (
         <>
-          <p className="muted">Toque no nome para definir ou trocar a senha.</p>
+          <p className="muted">Toque no nome para definir ou trocar a senha. Senhas novas precisam de 8 caracteres. Quem já tem senha de 4 dígitos continua entrando com ela.</p>
           {pessoas.map((pessoa) => {
             const aberta = editando === pessoa.nome;
             return (
@@ -71,7 +71,7 @@ export function SenhasUsuarios() {
                     <input
                       type="password"
                       autoComplete="new-password"
-                      placeholder="Nova senha"
+                      placeholder="Nova senha, 8 caracteres"
                       aria-label={`Senha de ${pessoa.nome}`}
                       value={senhas[pessoa.nome] ?? ""}
                       onChange={(e) => setSenhas((prev) => ({ ...prev, [pessoa.nome]: e.target.value }))}
