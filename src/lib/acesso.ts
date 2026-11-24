@@ -55,21 +55,25 @@ export function podeDefinirSenhas(usuario: Usuario): boolean {
   return usuario.papel === "conta" || usuario.papel === "escritorio";
 }
 
+/** Pessoa que entrou com o próprio nome e senha. */
+export async function lerSessaoAcesso(request: Request): Promise<Usuario | undefined> {
+  const token = lerCookie(request, COOKIE);
+  if (!token) return undefined;
+  const sessao = await lerSessao(token);
+  if (!sessao) return undefined;
+  return {
+    sub: `usuario:${sessao.id}`,
+    name: sessao.nome,
+    email: "",
+    kind: "person",
+    papel: sessao.papel,
+  };
+}
+
 /** Sessão de uma pessoa da equipe, ou a conta Cursor de quem já passou no portão privado ou do time. */
 export async function lerAcesso(request: Request): Promise<Usuario | undefined> {
-  const token = lerCookie(request, COOKIE);
-  if (token) {
-    const sessao = await lerSessao(token);
-    if (sessao) {
-      return {
-        sub: `usuario:${sessao.id}`,
-        name: sessao.nome,
-        email: "",
-        kind: "person",
-        papel: sessao.papel,
-      };
-    }
-  }
+  const sessao = await lerSessaoAcesso(request);
+  if (sessao) return sessao;
 
   const identity = await getIdentity(request);
   if (!identity.verified || identity.kind !== "person") return undefined;
