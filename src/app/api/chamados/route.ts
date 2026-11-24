@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { requireIdentity } from "../../../../cursor/identity";
+import { requireAcesso } from "../../../lib/acesso";
 import { sql } from "../../../lib/db";
 import { transcribeAudioDataUrl } from "../../../lib/transcribe";
 import { rateLimit } from "../../../lib/rate-limit";
@@ -23,6 +23,7 @@ function asUrgencia(value: unknown): Urgencia {
 const LIST_COLUMNS = `
   id, cliente, quem_chamou, telefone, endereco, servico, defeito, urgencia,
   descricao, transcricao, funcionarios, horario, inicio, termino, marcado,
+  valor_minimo, horas_extra, valores_hora, deslocamento, deslocamento_km, deslocamento_valor,
   status, assumido_por, assumido_em, criado_por, criado_por_nome, criado_em,
   atualizado_em, checklist, assinado_nome, assinado_em,
   (audio_base64 <> '') as tem_audio,
@@ -30,12 +31,17 @@ const LIST_COLUMNS = `
   (select count(*)::int from fotos f where f.chamado_id = c.id) as fotos_count,
   (select count(*)::int from produtos p where p.chamado_id = c.id) as produtos_count,
   (select coalesce(string_agg(
-     case when texto <> '' then texto else 'Foto do produto' end,
+     (case when texto <> '' then texto else 'Foto do produto' end)
+     || case
+          when valor is null then ''
+          else ' — R$ ' || replace(trim(to_char(valor, 'FM999999990.00')), '.', ',')
+        end,
      chr(10) order by criado_em
-   ), '') from produtos p where p.chamado_id = c.id) as produtos`;
+   ), '') from produtos p where p.chamado_id = c.id) as produtos,
+  (select sum(valor) from produtos p where p.chamado_id = c.id) as produtos_total`;
 
 export async function GET(request: Request) {
-  const identity = await requireIdentity(request);
+  const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
 
   const url = new URL(request.url);
@@ -72,7 +78,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const identity = await requireIdentity(request);
+  const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
 
   if (tooLarge(request, 1_200_000)) {

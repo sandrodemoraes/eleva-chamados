@@ -1,4 +1,4 @@
-const CACHE = "eleva-v2";
+const CACHE = "eleva-v3";
 const SHELL = "/";
 
 self.addEventListener("install", (event) => {
@@ -65,10 +65,6 @@ self.addEventListener("fetch", (event) => {
   }
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
     event.respondWith(cachePrimeiro(request));
-    return;
-  }
-  if (url.pathname === "/api/chamados" || url.pathname.endsWith("/audio")) {
-    event.respondWith(redePrimeiro(request));
   }
 });
 

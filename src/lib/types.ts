@@ -38,6 +38,13 @@ export type Chamado = {
   horario: string;
   produtos?: string;
   produtos_count?: number;
+  produtos_total?: number | string | null;
+  valor_minimo?: number | string | null;
+  horas_extra?: number | string | null;
+  valores_hora?: string;
+  deslocamento?: boolean;
+  deslocamento_km?: number | string | null;
+  deslocamento_valor?: number | string | null;
   inicio: string;
   termino: string;
   marcado: boolean;
@@ -83,6 +90,11 @@ export type ChamadoEdit = {
   transcricao?: string;
   funcionarios?: string;
   horario?: string;
+  horas_extra?: number | null;
+  valores_hora?: Record<string, number | null>;
+  deslocamento?: boolean;
+  deslocamento_km?: number | null;
+  deslocamento_valor?: number | null;
   inicio?: string;
   termino?: string;
   marcado?: boolean;
@@ -104,6 +116,7 @@ export type Produto = {
   id: string;
   chamado_id: string;
   texto: string;
+  valor?: number | string | null;
   imagem_base64?: string;
   criado_em: string;
   criado_por_nome: string;

@@ -1,4 +1,4 @@
-import { requireIdentity } from "../../../../cursor/identity";
+import { requireAcesso } from "../../../lib/acesso";
 import { sql } from "../../../lib/db";
 import { vapidKeys } from "../../../lib/push";
 import { rateLimit } from "../../../lib/rate-limit";
@@ -29,7 +29,7 @@ function pushEndpointPermitido(endpoint: string): boolean {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const identity = await requireIdentity(request);
+  const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
   const { publicKey } = await vapidKeys();
   return Response.json(
@@ -45,7 +45,7 @@ type Body = {
 };
 
 export async function POST(request: Request) {
-  const identity = await requireIdentity(request);
+  const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
   if (tooLarge(request, 8_000)) {
     return Response.json({ error: "grande demais" }, { status: 413 });
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const identity = await requireIdentity(request);
+  const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
   let body: Body;
   try {

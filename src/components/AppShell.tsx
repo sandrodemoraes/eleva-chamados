@@ -5,6 +5,7 @@ import { ChamadoComposer } from "./ChamadoComposer";
 import { ChamadoBoard } from "./ChamadoBoard";
 import { AbertosAlert } from "./AbertosAlert";
 import { EQUIPE, ESCRITORIO } from "../lib/equipe";
+import { Entrar } from "./Entrar";
 import { useFila } from "../lib/outbox";
 import type { Chamado } from "../lib/types";
 
@@ -18,6 +19,8 @@ export function AppShell() {
   const [tecnico, setTecnico] = useState("");
   const [conta, setConta] = useState("");
   const [abrindo, setAbrindo] = useState(false);
+  const [liberado, setLiberado] = useState<boolean | null>(null);
+  const [porSenha, setPorSenha] = useState(false);
 
   const fila = useFila();
 
@@ -29,11 +32,19 @@ export function AppShell() {
     if (new URLSearchParams(window.location.search).get("aba") === "abertos") {
       setMode("abertos");
     }
+    void fetch("/api/acesso", { cache: "no-store" })
+      .then(async (res) => {
+        const data = (await res.json().catch(() => null)) as { por?: string } | null;
+        setLiberado(res.ok);
+        setPorSenha(data?.por === "senha");
+      })
+      .catch(() => setLiberado(false));
     void fetch("/api/eu", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { name?: string; email?: string } | null) => {
+      .then((data: { name?: string; email?: string; por?: string } | null) => {
         if (!data) return;
-        setConta(data.email || data.name || "");
+        if (data.por === "senha") setConta("a senha do escritório");
+        else setConta(data.email || data.name || "");
       })
       .catch(() => undefined);
   }, []);
@@ -46,9 +57,44 @@ export function AppShell() {
 
   const refresh = useCallback(() => setRefreshToken((n) => n + 1), []);
   const verAbertos = useCallback(() => setMode("abertos"), []);
+  const irParaCampo = useCallback(() => {
+    setMode("campo");
+    refresh();
+    window.scrollTo({ top: 0 });
+  }, [refresh]);
 
   function onCreated(_chamado?: Chamado) {
     refresh();
+  }
+
+  async function sair() {
+    await fetch("/api/sair", { method: "POST" });
+    setPorSenha(false);
+    setConta("");
+    setLiberado(false);
+  }
+
+  if (liberado !== true) {
+    return (
+      <div className="shell">
+        <header className="top">
+          <div className="brand-block">
+            <p className="brand">ELEVA</p>
+          </div>
+        </header>
+        {liberado === false ? (
+          <Entrar
+            onEntrou={() => {
+              setLiberado(true);
+              setPorSenha(true);
+              setConta("a senha do escritório");
+            }}
+          />
+        ) : (
+          <p className="lede">Abrindo…</p>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -107,10 +153,17 @@ export function AppShell() {
           </optgroup>
         </select>
         <p className="eu-sou-nota">
-          A entrada no app é a conta Cursor. Este nome só marca quem está no aparelho.
+          A senha abre o app para todo mundo. Este nome só marca quem está no aparelho.
+          {porSenha && (
+            <>
+              {" "}
+              <button type="button" className="link-btn" onClick={sair}>
+                Sair
+              </button>
+            </>
+          )}
         </p>
       </div>
-
       {(!fila.online || fila.qtd > 0) && (
         <p className={fila.online ? "fila fila--sync" : "fila"} role="status">
           {!fila.online && "Sem internet. Pode continuar trabalhando: tudo fica guardado no celular."}
@@ -132,11 +185,18 @@ export function AppShell() {
 
       {mode === "campo" && (
         <main className="main main--campo">
-          <h1 className="headline">Anote o chamado falando</h1>
+          <h1 className="headline headline--sm">Serviços no campo</h1>
           <p className="lede">
-            Grave o áudio, marque os funcionários, o horário e envie. No
-            escritório dá para editar o chamado durante o serviço.
+            Chamados que você pegou. Anote o produto, o valor e o
+            deslocamento durante a execução. O mínimo de cada chamado é R$ 150.
           </p>
+          <ChamadoBoard
+            key="campo"
+            refreshToken={refreshToken}
+            tecnico={tecnico}
+            initialFilter="em_andamento"
+          />
+          <h2 className="headline headline--sm">Anote outro chamado falando</h2>
           <ChamadoComposer autor={tecnico} onCreated={onCreated} />
         </main>
       )}
@@ -153,6 +213,7 @@ export function AppShell() {
             refreshToken={refreshToken}
             tecnico={tecnico}
             initialFilter="aberto"
+            onAssumiu={irParaCampo}
           />
         </main>
       )}
@@ -192,6 +253,7 @@ export function AppShell() {
             refreshToken={refreshToken}
             tecnico={tecnico}
             initialFilter="todos"
+            onAssumiu={irParaCampo}
           />
         </main>
       )}

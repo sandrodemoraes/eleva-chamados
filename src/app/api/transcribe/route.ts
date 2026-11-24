@@ -1,4 +1,4 @@
-import { requireIdentity } from "../../../../cursor/identity";
+import { requireAcesso } from "../../../lib/acesso";
 import { rateLimit } from "../../../lib/rate-limit";
 import { transcribeAudioDataUrl } from "../../../lib/transcribe";
 
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 const MAX_BODY = 1_200_000; // ~900KB data-url + margem
 
 export async function POST(request: Request) {
-  const identity = await requireIdentity(request);
+  const identity = await requireAcesso(request);
   if (identity instanceof Response) return identity;
 
   if (!rateLimit(`transcribe:${identity.sub}`, 20, 60_000)) {
