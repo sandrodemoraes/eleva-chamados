@@ -46,6 +46,11 @@ export function AppShell() {
 
   const refresh = useCallback(() => setRefreshToken((n) => n + 1), []);
   const verAbertos = useCallback(() => setMode("abertos"), []);
+  const irParaCampo = useCallback(() => {
+    setMode("campo");
+    refresh();
+    window.scrollTo({ top: 0 });
+  }, [refresh]);
 
   function onCreated(_chamado?: Chamado) {
     refresh();
@@ -132,11 +137,18 @@ export function AppShell() {
 
       {mode === "campo" && (
         <main className="main main--campo">
-          <h1 className="headline">Anote o chamado falando</h1>
+          <h1 className="headline headline--sm">Serviços no campo</h1>
           <p className="lede">
-            Grave o áudio, marque os funcionários, o horário e envie. No
-            escritório dá para editar o chamado durante o serviço.
+            Chamados que você pegou. Anote o produto, o valor e o
+            deslocamento durante a execução. O mínimo de cada chamado é R$ 150.
           </p>
+          <ChamadoBoard
+            key="campo"
+            refreshToken={refreshToken}
+            tecnico={tecnico}
+            initialFilter="em_andamento"
+          />
+          <h2 className="headline headline--sm">Anote outro chamado falando</h2>
           <ChamadoComposer autor={tecnico} onCreated={onCreated} />
         </main>
       )}
@@ -153,6 +165,7 @@ export function AppShell() {
             refreshToken={refreshToken}
             tecnico={tecnico}
             initialFilter="aberto"
+            onAssumiu={irParaCampo}
           />
         </main>
       )}
@@ -192,6 +205,7 @@ export function AppShell() {
             refreshToken={refreshToken}
             tecnico={tecnico}
             initialFilter="todos"
+            onAssumiu={irParaCampo}
           />
         </main>
       )}

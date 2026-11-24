@@ -16,6 +16,7 @@ import { AudioSob } from "./AudioSob";
 import { ChecklistPanel } from "./ChecklistPanel";
 import { FotosPanel } from "./FotosPanel";
 import { ProdutosPanel } from "./ProdutosPanel";
+import { ValoresServico } from "./ValoresServico";
 import { AssinaturaPanel } from "./AssinaturaPanel";
 import { HistoricoCliente } from "./HistoricoCliente";
 import { checklistDo, faltandoObrigatorios, lerChecklist } from "../lib/checklists";
@@ -83,12 +84,14 @@ type Props = {
   refreshToken: number;
   tecnico: string;
   initialFilter?: string;
+  onAssumiu?: () => void;
 };
 
 export function ChamadoBoard({
   refreshToken,
   tecnico,
   initialFilter = "aberto",
+  onAssumiu,
 }: Props) {
   const [filter, setFilter] = useState(initialFilter);
   const [items, setItems] = useState<Chamado[]>([]);
@@ -219,8 +222,10 @@ export function ChamadoBoard({
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         setError(data.error || "Não foi possível pegar o chamado.");
+      } else {
+        onAssumiu?.();
       }
-      load();
+      if (!onAssumiu || !res.ok) load();
     } finally {
       setBusyId(null);
     }
@@ -514,6 +519,10 @@ export function ChamadoBoard({
                     </div>
                   )}
                   {(c.tem_audio || c.audio_base64) && <AudioSob chamadoId={c.id} />}
+                  <ValoresServico
+                    chamado={c}
+                    onSalvar={(campos) => salvarCampos(c.id, campos, "Valores do serviço")}
+                  />
                   <HistoricoCliente cliente={c.cliente} excluirId={c.id} />
                   <div className="paineis-tabs">
                     <button

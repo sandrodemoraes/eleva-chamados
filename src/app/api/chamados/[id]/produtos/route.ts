@@ -11,6 +11,13 @@ const MAX_IMAGEM = 700_000;
 const MAX_PRODUTOS = 40;
 const IMAGEM_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 
+function lerValor(value: unknown): number | null | "invalid" {
+  if (value === null || value === undefined || value === "") return null;
+  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  if (!Number.isFinite(n) || n < 0 || n > 1_000_000) return "invalid";
+  return Math.round(n * 100) / 100;
+}
+
 export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> },
@@ -23,7 +30,7 @@ export async function GET(
   }
 
   const produtos = await sql<Produto>(
-    `select id, chamado_id, texto, imagem_base64, criado_em, criado_por_nome
+    `select id, chamado_id, texto, valor, imagem_base64, criado_em, criado_por_nome
      from produtos where chamado_id = $1 order by criado_em`,
     [id],
   );
@@ -51,7 +58,7 @@ export async function POST(
     return Response.json({ error: "id inválido" }, { status: 400 });
   }
 
-  let body: { id?: unknown; texto?: unknown; imagem_base64?: unknown };
+  let body: { id?: unknown; texto?: unknown; imagem_base64?: unknown; valor?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -60,6 +67,10 @@ export async function POST(
 
   const texto = typeof body.texto === "string" ? body.texto.trim().slice(0, 500) : "";
   const imagem = typeof body.imagem_base64 === "string" ? body.imagem_base64 : "";
+  const valor = lerValor(body.valor);
+  if (valor === "invalid") {
+    return Response.json({ error: "Valor inválido" }, { status: 400 });
+  }
   if (!texto && !imagem) {
     return Response.json({ error: "Fale, digite ou fotografe o produto" }, { status: 400 });
   }
@@ -86,10 +97,10 @@ export async function POST(
     typeof body.id === "string" && UUID_RE.test(body.id) ? body.id : randomUUID();
 
   await sql(
-    `insert into produtos (id, chamado_id, texto, imagem_base64, criado_por, criado_por_nome)
-     values ($1,$2,$3,$4,$5,$6)
+    `insert into produtos (id, chamado_id, texto, valor, imagem_base64, criado_por, criado_por_nome)
+     values ($1,$2,$3,$4,$5,$6,$7)
      on conflict (id) do nothing`,
-    [produtoId, id, texto, imagem, identity.sub, nomeDe(identity)],
+    [produtoId, id, texto, valor, imagem, identity.sub, nomeDe(identity)],
   );
   await sql(`update chamados set atualizado_em = now() where id = $1`, [id]);
 

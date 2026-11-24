@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { formatarReais } from "../lib/parse-chamado";
 import { enviar, novoId } from "../lib/outbox";
 import type { Produto } from "../lib/types";
 
@@ -27,6 +28,21 @@ type SpeechEvent = {
 
 const LADO_MAX = 1280;
 const MAX_AUDIO = 900_000;
+
+function lerValor(raw: string): number | null | "invalid" {
+  const t = raw.trim();
+  if (!t) return null;
+  const limpo = t.replace(/[^\d,.-]/g, "");
+  const ultimaVirgula = limpo.lastIndexOf(",");
+  const ultimoPonto = limpo.lastIndexOf(".");
+  const normal =
+    ultimaVirgula > ultimoPonto
+      ? limpo.replace(/\./g, "").replace(",", ".")
+      : limpo.replace(/,/g, "");
+  const n = Number(normal);
+  if (!Number.isFinite(n) || n < 0 || n > 1_000_000) return "invalid";
+  return Math.round(n * 100) / 100;
+}
 
 function juntar(base: string, extra: string) {
   const b = base.trim();
@@ -68,6 +84,7 @@ export function ProdutosPanel({ chamadoId, onChange }: Props) {
   const [itens, setItens] = useState<Produto[]>([]);
   const [locais, setLocais] = useState<Produto[]>([]);
   const [texto, setTexto] = useState("");
+  const [valor, setValor] = useState("");
   const [interim, setInterim] = useState("");
   const [foto, setFoto] = useState("");
   const [msg, setMsg] = useState("");
@@ -242,6 +259,11 @@ export function ProdutosPanel({ chamadoId, onChange }: Props) {
 
   async function adicionar() {
     const nome = texto.trim();
+    const preco = lerValor(valor);
+    if (preco === "invalid") {
+      setMsg("Valor inválido. Use algo como 150,00.");
+      return;
+    }
     if (!nome && !foto) {
       setMsg("Fale, digite ou fotografe o produto.");
       return;
@@ -252,6 +274,7 @@ export function ProdutosPanel({ chamadoId, onChange }: Props) {
       id: novoId(),
       chamado_id: chamadoId,
       texto: nome,
+      valor: preco,
       imagem_base64: foto,
       criado_em: new Date().toISOString(),
       criado_por_nome: "",
@@ -264,6 +287,7 @@ export function ProdutosPanel({ chamadoId, onChange }: Props) {
     }
     setLocais((prev) => [...prev, item]);
     setTexto("");
+    setValor("");
     setFoto("");
     setInterim("");
     finaisRef.current = "";
@@ -287,16 +311,28 @@ export function ProdutosPanel({ chamadoId, onChange }: Props) {
 
   return (
     <div className="produtos">
-      <label className="field" htmlFor={`produto-${chamadoId}`}>
-        <span>Produto usado neste serviço</span>
-        <textarea
-          id={`produto-${chamadoId}`}
-          rows={2}
-          value={texto}
-          placeholder="Ex.: câmera 2 MP, fonte 12V, cabo coaxial"
-          onChange={(e) => setTexto(e.target.value)}
-        />
-      </label>
+      <div className="produto-campos">
+        <label className="field" htmlFor={`produto-${chamadoId}`}>
+          <span>Produto usado neste serviço</span>
+          <textarea
+            id={`produto-${chamadoId}`}
+            rows={2}
+            value={texto}
+            placeholder="Ex.: câmera 2 MP, fonte 12V, cabo coaxial"
+            onChange={(e) => setTexto(e.target.value)}
+          />
+        </label>
+        <label className="field" htmlFor={`valor-${chamadoId}`}>
+          <span>Valor (R$)</span>
+          <input
+            id={`valor-${chamadoId}`}
+            inputMode="decimal"
+            value={valor}
+            placeholder="0,00"
+            onChange={(e) => setValor(e.target.value)}
+          />
+        </label>
+      </div>
       {interim && <p className="hint hint--live">Ouvindo: {interim}</p>}
       <div className="produto-acoes">
         <button
@@ -341,7 +377,10 @@ export function ProdutosPanel({ chamadoId, onChange }: Props) {
                 <img src={p.imagem_base64} alt="" />
               ) : null}
               <div className="produto-texto">
-                <p>{p.texto || "Foto do produto"}</p>
+                <p>
+                  {p.texto || "Foto do produto"}
+                  {formatarReais(p.valor) ? ` — ${formatarReais(p.valor)}` : ""}
+                </p>
                 <button type="button" className="link-btn" onClick={() => void apagar(p.id)}>
                   Apagar
                 </button>

@@ -241,6 +241,92 @@ export function parseChamadoFromSpeech(transcricao: string): ChamadoInput {
   };
 }
 
+export function formatarReais(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "";
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return "";
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+export const VALOR_MINIMO = 150;
+
+export function lerValoresHora(raw: unknown): Record<string, number | null> {
+  if (!raw) return {};
+  if (typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as Record<string, number | null>;
+  }
+  if (typeof raw !== "string") return {};
+  try {
+    const data = JSON.parse(raw) as unknown;
+    if (typeof data !== "object" || data === null || Array.isArray(data)) return {};
+    return data as Record<string, number | null>;
+  } catch {
+    return {};
+  }
+}
+
+function numero(value: number | string | null | undefined): number {
+  if (value === null || value === undefined || value === "") return 0;
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatarQtd(value: number | string | null | undefined): string {
+  const n = numero(value);
+  if (!n) return "";
+  return n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+}
+
+export function linhasValores(c: {
+  horas_extra?: number | string | null;
+  valores_hora?: string | Record<string, number | null>;
+  deslocamento?: boolean;
+  deslocamento_km?: number | string | null;
+  deslocamento_valor?: number | string | null;
+  produtos_total?: number | string | null;
+}): string[] {
+  const valores = lerValoresHora(c.valores_hora);
+  const linhas = [`Mínimo do chamado: ${formatarReais(VALOR_MINIMO)}`];
+  if (numero(c.horas_extra) > 0) {
+    linhas.push(`Horas adicionais: ${formatarQtd(c.horas_extra)}`);
+  }
+  const nomes = Object.keys(valores);
+  if (nomes.length === 0) {
+    linhas.push("Valor das horas: em aberto");
+  }
+  for (const nome of nomes) {
+    const valor = valores[nome];
+    const rotulo = nome ? `Valor das horas de ${nome}` : "Valor das horas";
+    linhas.push(
+      valor == null ? `${rotulo}: em aberto` : `${rotulo}: ${formatarReais(valor)}`,
+    );
+  }
+  if (c.deslocamento) {
+    const partes = [
+      numero(c.deslocamento_km) > 0 ? `${formatarQtd(c.deslocamento_km)} km` : "",
+      formatarReais(c.deslocamento_valor),
+    ].filter(Boolean);
+    linhas.push(`Deslocamento: ${partes.join(" — ") || "marcado"}`);
+  }
+  linhas.push(`Total: ${formatarReais(totalServico(c))}`);
+  return linhas;
+}
+
+export function totalServico(c: {
+  valores_hora?: string | Record<string, number | null>;
+  deslocamento?: boolean;
+  deslocamento_valor?: number | string | null;
+  produtos_total?: number | string | null;
+}): number {
+  const valores = lerValoresHora(c.valores_hora);
+  const horas = Object.values(valores).reduce<number>(
+    (soma, valor) => soma + (valor == null ? 0 : numero(valor)),
+    0,
+  );
+  const deslocamento = c.deslocamento ? numero(c.deslocamento_valor) : 0;
+  return Math.round((VALOR_MINIMO + horas + deslocamento + numero(c.produtos_total)) * 100) / 100;
+}
+
 export function textoParaNota(c: {
   cliente: string;
   quem_chamou?: string;
@@ -253,6 +339,12 @@ export function textoParaNota(c: {
   funcionarios?: string;
   horario?: string;
   produtos?: string;
+  produtos_total?: number | string | null;
+  horas_extra?: number | string | null;
+  valores_hora?: string | Record<string, number | null>;
+  deslocamento?: boolean;
+  deslocamento_km?: number | string | null;
+  deslocamento_valor?: number | string | null;
   inicio?: string;
   termino?: string;
   marcado?: boolean;
@@ -287,6 +379,10 @@ export function textoParaNota(c: {
           .map((p) => `- ${p}`)
           .join("\n")}`
       : "Produtos usados: —",
+    ...(formatarReais(c.produtos_total)
+      ? [`Total dos produtos: ${formatarReais(c.produtos_total)}`]
+      : []),
+    ...linhasValores(c),
     `Início: ${formatHorarioLabel(c.inicio || "")}`,
     `Término: ${formatHorarioLabel(c.termino || "")}`,
     ...(duracaoLabel(c.inicio, c.termino)

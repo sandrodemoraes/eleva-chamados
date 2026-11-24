@@ -711,6 +711,27 @@ body::before {
   color: var(--ink-soft);
 }
 
+.valores {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  border: 1px solid var(--line, #d7d2c8);
+  border-radius: 12px;
+  background: #faf7f2;
+  display: grid;
+  gap: 0.55rem;
+}
+.valores-titulo {
+  margin: 0;
+  font-weight: 650;
+}
+.valores-minimo,
+.valores-minimo,
+.valores-total {
+  margin: 0;
+}
+.valores-total {
+  font-weight: 650;
+}
 .paineis-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -740,6 +761,19 @@ body::before {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--accent-deep);
+}
+
+.produto-campos {
+  display: grid;
+  grid-template-columns: 1fr minmax(7rem, 9rem);
+  gap: 0.5rem;
+  align-items: end;
+}
+
+@media (max-width: 520px) {
+  .produto-campos {
+    grid-template-columns: 1fr;
+  }
 }
 
 .produtos {

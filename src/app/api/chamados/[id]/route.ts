@@ -18,6 +18,39 @@ const STATUSES: ChamadoStatus[] = [
   "cancelado",
 ];
 
+function asDecimal(
+  value: unknown,
+  max: number,
+): number | null | undefined | "invalid" {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  const n =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : NaN;
+  if (!Number.isFinite(n) || n < 0 || n > max) return "invalid";
+  return Math.round(n * 100) / 100;
+}
+
+function asValoresHora(
+  value: unknown,
+): Record<string, number | null> | undefined | "invalid" {
+  if (value === undefined) return undefined;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return "invalid";
+  }
+  const out: Record<string, number | null> = {};
+  for (const [nome, bruto] of Object.entries(value).slice(0, 12)) {
+    if (nome.length > 120) return "invalid";
+    const n = asDecimal(bruto, 1_000_000);
+    if (n === "invalid" || n === undefined) return "invalid";
+    out[nome] = n;
+  }
+  return out;
+}
+
 function asString(value: unknown, max: number): string | undefined {
   if (typeof value !== "string") return undefined;
   return value.trim().slice(0, max);
@@ -92,6 +125,38 @@ export async function PATCH(
   if (inicio !== undefined) add("inicio", inicio);
   const termino = asString(body.termino, 40);
   if (termino !== undefined) add("termino", termino);
+
+  const horas = asDecimal(body.horas_extra, 999);
+  if (horas === "invalid") {
+    return Response.json({ error: "Horas inválidas" }, { status: 400 });
+  }
+  if (horas !== undefined) add("horas_extra", horas);
+
+  const valores = asValoresHora(body.valores_hora);
+  if (valores === "invalid") {
+    return Response.json({ error: "Valor das horas inválido" }, { status: 400 });
+  }
+  if (valores !== undefined) add("valores_hora", JSON.stringify(valores));
+
+  if (typeof body.deslocamento === "boolean") {
+    add("deslocamento", body.deslocamento);
+    if (!body.deslocamento) {
+      add("deslocamento_km", null);
+      add("deslocamento_valor", null);
+    }
+  }
+  if (body.deslocamento !== false) {
+    const km = asDecimal(body.deslocamento_km, 5000);
+    if (km === "invalid") {
+      return Response.json({ error: "Km inválido" }, { status: 400 });
+    }
+    if (km !== undefined) add("deslocamento_km", km);
+    const deslocValor = asDecimal(body.deslocamento_valor, 1_000_000);
+    if (deslocValor === "invalid") {
+      return Response.json({ error: "Valor do deslocamento inválido" }, { status: 400 });
+    }
+    if (deslocValor !== undefined) add("deslocamento_valor", deslocValor);
+  }
 
   if (typeof body.marcado === "boolean") add("marcado", body.marcado);
 
