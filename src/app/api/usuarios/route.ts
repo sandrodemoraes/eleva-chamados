@@ -47,8 +47,8 @@ export async function POST(request: Request) {
   }
   const nome = typeof body.nome === "string" ? body.nome.trim() : "";
   const senha = typeof body.senha === "string" ? body.senha : "";
-  if (senha.length < 6 || senha.length > 80) {
-    return Response.json({ error: "A senha precisa ter de 6 a 80 caracteres." }, { status: 400, headers: noStore });
+  if (senha.length < 4 || senha.length > 80) {
+    return Response.json({ error: "A senha precisa ter de 4 a 80 caracteres." }, { status: 400, headers: noStore });
   }
   const ok = await definirSenha(nome, senha);
   if (!ok) {
