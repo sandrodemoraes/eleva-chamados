@@ -4,8 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { ChamadoComposer } from "./ChamadoComposer";
 import { ChamadoBoard } from "./ChamadoBoard";
 import { AbertosAlert } from "./AbertosAlert";
-import { EQUIPE, ESCRITORIO } from "../lib/equipe";
+import { EQUIPE, ESCRITORIO, ehDoEscritorio } from "../lib/equipe";
 import { Entrar } from "./Entrar";
+import { SenhasUsuarios } from "./SenhasUsuarios";
 import { useFila } from "../lib/outbox";
 import type { Chamado } from "../lib/types";
 
@@ -21,6 +22,7 @@ export function AppShell() {
   const [abrindo, setAbrindo] = useState(false);
   const [liberado, setLiberado] = useState<boolean | null>(null);
   const [porSenha, setPorSenha] = useState(false);
+  const [podeSenhas, setPodeSenhas] = useState(false);
 
   const fila = useFila();
 
@@ -41,10 +43,16 @@ export function AppShell() {
       .catch(() => setLiberado(false));
     void fetch("/api/eu", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { name?: string; email?: string; por?: string } | null) => {
+      .then((data: { name?: string; email?: string; por?: string; podeSenhas?: boolean } | null) => {
         if (!data) return;
-        if (data.por === "senha") setConta("a senha do escritório");
-        else setConta(data.email || data.name || "");
+        setPodeSenhas(Boolean(data.podeSenhas));
+        if (data.por === "senha" && data.name) {
+          setConta(data.name);
+          setTecnico(data.name);
+          localStorage.setItem(TECNICO_KEY, data.name);
+          return;
+        }
+        setConta(data.email || data.name || "");
       })
       .catch(() => undefined);
   }, []);
@@ -84,10 +92,13 @@ export function AppShell() {
         </header>
         {liberado === false ? (
           <Entrar
-            onEntrou={() => {
+            onEntrou={(nome) => {
               setLiberado(true);
               setPorSenha(true);
-              setConta("a senha do escritório");
+              setPodeSenhas(ehDoEscritorio(nome));
+              setConta(nome);
+              setTecnico(nome);
+              localStorage.setItem(TECNICO_KEY, nome);
             }}
           />
         ) : (
@@ -134,6 +145,7 @@ export function AppShell() {
         <select
           id="eu-sou"
           value={tecnico}
+          disabled={porSenha}
           onChange={(e) => escolherTecnico(e.target.value)}
         >
           <option value="">Escolha seu nome</option>
@@ -153,7 +165,9 @@ export function AppShell() {
           </optgroup>
         </select>
         <p className="eu-sou-nota">
-          A senha abre o app para todo mundo. Este nome só marca quem está no aparelho.
+          {porSenha
+            ? "Você entrou com o seu usuário."
+            : "Defina a senha de cada pessoa abaixo. Quem entra com a senha fica com o próprio nome."}
           {porSenha && (
             <>
               {" "}
@@ -164,6 +178,7 @@ export function AppShell() {
           )}
         </p>
       </div>
+      {podeSenhas && <SenhasUsuarios />}
       {(!fila.online || fila.qtd > 0) && (
         <p className={fila.online ? "fila fila--sync" : "fila"} role="status">
           {!fila.online && "Sem internet. Pode continuar trabalhando: tudo fica guardado no celular."}
