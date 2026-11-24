@@ -164,19 +164,11 @@ export function AppShell() {
             ))}
           </optgroup>
         </select>
-        <p className="eu-sou-nota">
-          {porSenha
-            ? "Você entrou com o seu usuário."
-            : "Defina a senha de cada pessoa abaixo. Quem entra com a senha fica com o próprio nome."}
-          {porSenha && (
-            <>
-              {" "}
-              <button type="button" className="link-btn" onClick={sair}>
-                Sair
-              </button>
-            </>
-          )}
-        </p>
+        {porSenha && (
+          <button type="button" className="link-btn" onClick={sair}>
+            Sair
+          </button>
+        )}
       </div>
       {podeSenhas && <SenhasUsuarios />}
       {(!fila.online || fila.qtd > 0) && (
