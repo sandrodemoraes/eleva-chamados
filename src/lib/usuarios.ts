@@ -5,7 +5,7 @@ export type UsuarioRow = {
   id: string;
   nome: string;
   senha_hash: string;
-  papel: "campo" | "escritorio";
+  papel: "campo" | "escritorio" | "admin";
 };
 
 const SELO = "eleva-usuario-v2";
@@ -56,6 +56,46 @@ export async function definirSenha(nome: string, senha: string): Promise<boolean
     [nome, hash],
   );
   return rows.length > 0;
+}
+
+export async function criarSenhaInicial(nome: string, senha: string): Promise<UsuarioRow | undefined> {
+  const hash = hashSenha(senha);
+  const rows = await sql<UsuarioRow>(
+    `update usuarios
+     set senha_hash = $2
+     where nome = $1 and senha_hash = ''
+     returning id, nome, senha_hash, papel`,
+    [nome, hash],
+  );
+  return rows[0];
+}
+
+export async function atualizarUsuario(
+  id: string,
+  campos: { nome: string; papel: UsuarioRow["papel"]; senha?: string; limparSenha?: boolean },
+): Promise<UsuarioRow | undefined> {
+  const hash = campos.limparSenha ? "" : campos.senha ? hashSenha(campos.senha) : undefined;
+  const rows =
+    hash === undefined
+      ? await sql<UsuarioRow>(
+          `update usuarios set nome = $2, papel = $3 where id = $1 returning id, nome, senha_hash, papel`,
+          [id, campos.nome, campos.papel],
+        )
+      : await sql<UsuarioRow>(
+          `update usuarios set nome = $2, papel = $3, senha_hash = $4 where id = $1 returning id, nome, senha_hash, papel`,
+          [id, campos.nome, campos.papel, hash],
+        );
+  return rows[0];
+}
+
+export async function excluirUsuario(id: string): Promise<boolean> {
+  const rows = await sql<{ id: string }>(`delete from usuarios where id = $1 returning id`, [id]);
+  return rows.length > 0;
+}
+
+export async function contarAdmins(): Promise<number> {
+  const rows = await sql<{ id: string }>(`select id from usuarios where papel = 'admin'`);
+  return rows.length;
 }
 
 export function emitirSessao(usuario: UsuarioRow, agora = Date.now()): string {

@@ -754,9 +754,33 @@ body::before {
   align-items: baseline;
   text-align: left;
 }
-.senha-linha input {
+.senha-linha input,
+.senha-edicao input,
+.senha-edicao select,
+.minha-senha input {
   flex: 1 1 8rem;
   min-width: 0;
+}
+.senha-edicao,
+.minha-senha {
+  display: grid;
+  gap: 0.45rem;
+  flex-basis: 100%;
+}
+.minha-senha-form {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+.senha-acoes {
+  display: flex;
+  gap: 0.45rem;
+}
+.check {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.85rem;
 }
 .valores {
   margin: 0.75rem 0;

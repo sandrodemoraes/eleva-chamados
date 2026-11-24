@@ -26,7 +26,15 @@ export async function POST(
 
   const tecnico =
     typeof body.tecnico === "string" ? body.tecnico.trim().slice(0, 120) : "";
-  if (!ehDaEquipe(tecnico)) {
+  if (identity.papel === "escritorio") {
+    return Response.json(
+      { error: "O escritório não pega chamado. Escolha um técnico de campo." },
+      { status: 400 },
+    );
+  }
+  const proprio =
+    identity.name === tecnico && (identity.papel === "campo" || identity.papel === "admin");
+  if (!ehDaEquipe(tecnico) && !proprio) {
     return Response.json(
       { error: "Escolha um técnico de campo para pegar o chamado" },
       { status: 400 },

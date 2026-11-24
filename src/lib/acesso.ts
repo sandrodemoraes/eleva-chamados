@@ -3,7 +3,7 @@ import { lerSessao } from "./usuarios";
 
 const COOKIE = "eleva_acesso";
 
-export type PapelAcesso = "campo" | "escritorio" | "conta";
+export type PapelAcesso = "campo" | "escritorio" | "admin" | "conta";
 
 export type Usuario = {
   sub: string;
@@ -51,8 +51,8 @@ export function cabecalhoSair(request: Request): string {
   return partes.join("; ");
 }
 
-export function podeDefinirSenhas(usuario: Usuario): boolean {
-  return usuario.papel === "conta" || usuario.papel === "escritorio";
+export function podeGerirUsuarios(usuario: Usuario): boolean {
+  return usuario.papel === "admin" || usuario.papel === "conta";
 }
 
 /** Pessoa que entrou com o próprio nome e senha. */
